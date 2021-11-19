@@ -12,3 +12,5 @@ print(names(math)) # show attributes
 write.table(math,file="math.csv",row.names=FALSE,col.names=TRUE)
 
 math=read.table(file="math.csv",header=TRUE) # read previously saved file
+
+write.table(math,file="math.csv",row.names=FALSE,col.names=TRUE)
