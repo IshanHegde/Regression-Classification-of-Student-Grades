@@ -1,4 +1,7 @@
 library(rminer)
+library(ggplot2)
+library(gridExtra)
+library(ggExtra)
 URL="http://archive.ics.uci.edu/ml/machine-learning-databases/00320/student
 .zip"
 temp=tempfile() # temporary file
@@ -13,8 +16,34 @@ write.table(math,file="math.csv",row.names=FALSE,col.names=TRUE)
 
 math=read.table(file="math.csv",header=TRUE) # read previously saved file
 
-write.table(math,file="math.csv",row.names=FALSE,col.names=TRUE)
 
+sum(math$Dalc=='2')
+
+hist(math$G3)
+
+plot(math$G1)
+math$Dalc
+
+length(math[math$sex=='F',]$G1)
+
+
+pMain = ggplot(math[math$sex=='F',], aes(x = G1, y = G2)) + geom_point()
+pTop = ggplot(math[math$sex=='F',], aes(x = G1)) + geom_histogram()
+pRight = ggplot(math[math$sex=='F',], aes(x = G2)) + geom_histogram() + coord_flip()
+pEmpty = ggplot(math[math$sex=='F',], aes(x = G1, y = G2)) +geom_blank() +theme(axis.text = element_blank(),axis.title = element_blank(),line = element_blank(),panel.background = element_blank())
+grid.arrange(pTop, pEmpty, pMain, pRight, ncol = 2, nrow = 2, widths = c(3, 1), heights = c(1, 3))
+
+
+pMain = ggplot(math[math$sex=='M',], aes(x = G1, y = G2)) + geom_point()
+pTop = ggplot(math[math$sex=='M',], aes(x = G1)) + geom_histogram()
+pRight = ggplot(math[math$sex=='M',], aes(x = G2)) + geom_histogram() + coord_flip()
+pEmpty = ggplot(math[math$sex=='M',], aes(x = G1, y = G2)) +geom_blank() +theme(axis.text = element_blank(),axis.title = element_blank(),line = element_blank(),panel.background = element_blank())
+grid.arrange(pTop, pEmpty, pMain, pRight, ncol = 2, nrow = 2, widths = c(3, 1), heights = c(1, 3))
+
+
+
+
+ggExtra::ggMarginal(ggplot(math, aes(math[math$sex=='F',]$G1, math[math$sex=='F',]$G2)) + geom_point())
 
 # EDA
 
@@ -36,29 +65,30 @@ p3 = 1-pchisq(T_obs,df=M-1)
 
 p3
 
-B= 10000
+B= 100000
 Tnm_b = rep(0,B)
 
+for (i in 1:B)
+  {
+  
+  g2treat_count
+  g2treat_Bcount =rmultinom(n=1,size=sum(g2treat_count),prob=pi_0)
+  g2treatB = g2treat_Bcount/sum(g2treat_Bcount)
+  
+  g2control_Bcount = rmultinom(n=1,size=sum(g2control_count),prob=pi_0)
+  g2controlB = g2control_Bcount/sum(g2control_Bcount)
+  
+  g2_Bcount=g2treat_Bcount +g2control_Bcount
+  g2B =g2_Bcount/sum(g2_Bcount)
+  
+  Tnm_b[i]=4*sum((sqrt(g2treatB)-sqrt(g2controlB))^2)*(sum(g2treat_Bcount)*sum(g2control_Bcount)/sum(g2_Bcount))
+  
+  }
 
-g2treat_count
-g2treat_Bcount =rmultinom(n=1,size=(g2treat_count),prob=pi_0)
-g2treatB = g2treat_Bcount/sum(g2treat_Bcount)
-
-g2control_Bcount =                rmultinom(n=1,size=sum(g2control_count),prob=pi_0)
-
-print(g2treatB)
-
-g2controlB = g2control_Bcount/sum(g2control_Bcount)
-
-g2_Bcount=g2treat_Bcount +g2control_Bcount
-g2B =g2_Bcount/sum(g2_Bcount)
-
-Tnm_b[1]=4*sum((sqrt(g2treatB)-sqrt(g2controlB))^2)*(sum(g2treat_Bcount)*sum(g2control_Bcount)/sum(g2_Bcount))
 
 
 
 
-Tnm_b[1]
 
 pB = sum(Tnm_b>=T_obs)/B
 
