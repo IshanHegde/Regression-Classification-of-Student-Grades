@@ -236,10 +236,17 @@ write.table(new_mat,"new_mat.csv",sep=',',row.names=FALSE,col.names=TRUE)
 
 math=read.table(file="new_mat.csv",sep=',',header=TRUE)
 
+
 # read the data file
-#split = sample.split(math, SplitRatio = 0.8)
-#math_train = subset(math, split == TRUE)
-#math_test = subset(math, split == FALSE)
+split = sample.split(math, SplitRatio = 0.8)
+math_train = subset(math, split == TRUE)
+math_test = subset(math, split == FALSE)
+#over sampling
+library(ROSE)
+data_balanced_over <- ovun.sample(pass~., data = math_train, method = "over",N =317)$data
+table(data_balanced_over$cls)
+
+
 
 # rminer packages
 inputs=2:30
@@ -331,3 +338,31 @@ mgraph(L,graph="VEC",xval=imax,Grid=10,data=cmath[H$tr,],TC=1,main=txt,PDF= "vec
 
 txt=paste(levels(y)[2],"ALIFT:",round(mmetric(y,P2,metric="ALIFT",TC=2),2)) 
 mgraph(y,P2,graph="LIFT",baseline=TRUE,Grid=10,main=txt,TC=2,PDF="lift-1")
+
+
+inputs=1:32 # all except pass and five
+g3=which(names(math)=="G3")
+cat("output class:",class(math[,g3]),"\n")
+rmath=math[,c(inputs,g3)] # for easy use
+y=rmath$g3 # target
+
+# mining for randomForest, external 5-fold, 20 Runs (=100 fitted models)
+M1=mining(G3~.,rmath,model="randomForest",method=c("kfold",5,123),Runs=20)
+m=mmetric(M1,metric=c("MAE","RMSE")) # 2 metrics:
+print(m) # show metrics for each run
+mi=meanint(m[,1])
+cat("RF MAE values:",round(mi$mean,2),"+-",round(mi$int,2),"\n")
+
+# regression scatter plot:
+txt=paste("G3 MAE:",round(mi$mean,2))
+mgraph(M1,graph="RSC",Grid=10,main=txt,PDF="rsc-1")
+
+# REC curve, comparison with multiple regression: "mr":
+M2=mining(G3~.,rmath,model="mr",method=c("kfold",5,123),Runs=20)
+L=vector("list",2) # list of minings
+L[[1]]=M1
+L[[2]]=M2
+mgraph(L,graph="REC",leg=c("randomForest","mr"),main="REC curve",xval=10,PDF="rec-1")
+
+# input importance 
+mgraph(M1,graph="imp",leg=names(rmath),xval=15,PDF="rec-2")
