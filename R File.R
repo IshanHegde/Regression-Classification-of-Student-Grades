@@ -149,26 +149,52 @@ math = read.csv('/Users/tom/OneDrive - HKUST Connect/MATH4993/Final.Project/stud
 colnames(mat)
 
 pass = cut(math$G3,c(-1,9,20),c('fail','pass'))
-five=cut(mat$G3,c(-1,9,11,13,15,20),c("F","D","C","B","A"))
+five=cut(math$G3,c(-1,9,11,13,15,20),c("F","D","C","B","A"))
+
+pdf("math-grades.pdf")
 par(mfrow=c(1,3)) 
 plot(pass,main="pass")
 plot(five,main="five") 
-hist(mat$G3,col="gray",main="G3",xlab="")
+hist(math$G3,col="gray",main="G3",xlab="")
+dev.off() 
 
-new_mat = cbind(mat,pass,five) 
-write.table(new_mat,"/Users/tom/OneDrive - HKUST Connect/MATH4993/Final.Project/new_mat.csv",sep=',',row.names=FALSE,col.names=TRUE)
+new_mat = cbind(math,pass,five) 
+write.table(new_mat,"new_mat.csv",sep=',',row.names=FALSE,col.names=TRUE)
 
-math=read.table(file="/Users/tom/OneDrive - HKUST Connect/MATH4993/Final.Project/new_mat.csv",sep=',',header=TRUE)
+math=read.table(file="new_mat.csv",sep=',',header=TRUE)
+
 # read the data file
-split = sample.split(math, SplitRatio = 0.8)
-math_train = subset(math, split == TRUE)
-math_test = subset(math, split == FALSE)
+#split = sample.split(math, SplitRatio = 0.8)
+#math_train = subset(math, split == TRUE)
+#math_test = subset(math, split == FALSE)
 
 # rminer packages
-inputs=2:30
-bout=which(names(math_train)=="pass") 
-cat("output class:",class(math_train[,bout]),"\n")
-B1=fit(pass~.,math[,c(inputs,bout)],model="rpart")
+inputs=2:29
+bout=which(names(math)=="pass") 
+cat("output class:",class(math[,bout]),"\n")
+
+
+# char-> string -> factor
+
+factored_math =data.frame(unclass(math),stringsAsFactors=TRUE)
+
+
+
+# Converting factors into numerical values  
+
+#must_convert<-sapply(factored_math,is.factor)
+#factored_math2 <-sapply(factored_math[,must_convert],unclass)
+#out1<-cbind(factored_math[,!must_convert],factored_math2)
+#col_order <- c(c(colnames(math)))
+#out <- out1[,col_order]
+
+
+math=factored_math
+
+bout=which(names(math)=="pass") 
+cat("output class:",class(math[,bout]),"\n")
+
+B1=fit(pass~.,math[,c(inputs)],model="rpart")
 print(B1@object)
 pdf("trees-1.pdf")
 plot(B1@object,uniform=TRUE,branch=0,compress=TRUE) 
