@@ -5,6 +5,7 @@ library(ggExtra)
 library("plot3D")
 library(plot3Drgl)
 library(dplyr)
+library(rminer)
 URL="http://archive.ics.uci.edu/ml/machine-learning-databases/00320/student
 .zip"
 temp=tempfile() # temporary file
@@ -141,10 +142,131 @@ pB
 
 
 
-
-
-
 # Predictive modelling
+library("caTools")
+set.seed(4993)
+math = read.csv('/Users/tom/OneDrive - HKUST Connect/MATH4993/Final.Project/student-mat.csv',sep = ',', head = T)
+colnames(mat)
 
+pass = cut(math$G3,c(-1,9,20),c('fail','pass'))
+five=cut(mat$G3,c(-1,9,11,13,15,20),c("F","D","C","B","A"))
+par(mfrow=c(1,3)) 
+plot(pass,main="pass")
+plot(five,main="five") 
+hist(mat$G3,col="gray",main="G3",xlab="")
 
+new_mat = cbind(mat,pass,five) 
+write.table(new_mat,"/Users/tom/OneDrive - HKUST Connect/MATH4993/Final.Project/new_mat.csv",sep=',',row.names=FALSE,col.names=TRUE)
 
+math=read.table(file="/Users/tom/OneDrive - HKUST Connect/MATH4993/Final.Project/new_mat.csv",sep=',',header=TRUE)
+# read the data file
+split = sample.split(math, SplitRatio = 0.8)
+math_train = subset(math, split == TRUE)
+math_test = subset(math, split == FALSE)
+
+# rminer packages
+inputs=2:30
+bout=which(names(math_train)=="pass") 
+cat("output class:",class(math_train[,bout]),"\n")
+B1=fit(pass~.,math[,c(inputs,bout)],model="rpart")
+print(B1@object)
+pdf("trees-1.pdf")
+plot(B1@object,uniform=TRUE,branch=0,compress=TRUE) 
+text(B1@object,xpd=TRUE,fancy=TRUE,fwidth=0.2,fheight=0.2) 
+dev.off()
+
+B4=fit(pass~.,math[,c(inputs,bout)],model="ksvm") # fit a support vector machine 
+print(B4@object)
+
+# Random forest regression
+inputs = 2:30
+# select outputs: regression task 
+g3=which(names(math)=="G3") 
+cat("output class:",class(math[,g3]),"\n")
+H=holdout(math$G3,ratio=0.8,seed=4993)
+print("holdout:")
+print(summary(H))
+R1=fit(G3~.,math[H$tr,c(inputs,g3)],model="randomForest")
+P1=predict(R1,math[H$ts,c(inputs,g3)])
+target1=math[H$ts,]$G3
+e1=mmetric(target1,P1,metric=c("MAE","R22"))
+error=paste("RF, holdout: MAE=",round(e1[1],2),", R2=",round(e1[2],2),sep=" ")
+pdf("rf-1.pdf") 
+mgraph(target1,P1,graph="RSC",Grid=10,main=error) 
+dev.off() 
+cat(error,"\n")
+
+# Binary Classification
+bout=which(names(math)=="pass") 
+cat("output class:",class(math[,bout]),"\n") 
+bmath=math[,c(inputs,bout)] # for easy use 
+y=bmath$pass # target
+# fit rpart to all data, pure class modeling (no probabilities) 
+B1=fit(pass~.,bmath,model="rpart",task="class") # fit a decision tree 
+P1=predict(B1,bmath) # class predictions print(P1[1]) # show 1st prediction 
+m=mmetric(y,P1,metric=c("ACC","ACCLASS")) print(m) # accuracy, accuracy per class 
+m=mmetric(y,P1,metric=c("CONF")) # a) 
+print(m$conf) # confusion matrix 
+m=mmetric(y,P1,metric=c("ALL")) 
+print(round(m,1)) # all pure class metrics
+
+# fit rpart to all data, default probabilistic modeling 
+B2=fit(pass~.,bmath,model="rpart",task="prob") # fit a decision tree 
+P2=predict(B2,bmath) # predicted probabilities p
+rint(P2[1,]) # show 1st prediction 
+m=mmetric(y,P2,metric=c("ACC"),TC=2,D=0.5) 
+print(m) # accuracy, accuracy per class 
+m=mmetric(y,P2,metric=c("CONF"),TC=2,D=0.1) # equal to a) 
+print(m$conf) # confusion matrix 
+m =mmetric(y,P2,metric=c("AUC","AUCCLASS")) 
+print(m) # AUC, AUC per class 
+m=mmetric(y,P2,metric=c("ALL")) 
+print(round(m,1)) # all prob metrics
+
+# ROC and LIFT curve: 
+txt=paste(levels(y)[2],"AUC:",round(mmetric(y,P2,metric="AUC",TC=2),2)) 
+mgraph(y,P2,graph="ROC",baseline=TRUE,Grid=10,main=txt,TC=2,PDF="roc-1") 
+txt=paste(levels(y)[2],"ALIFT:",round(mmetric(y,P2,metric="ALIFT",TC=2),2)) 
+mgraph(y,P2,graph="LIFT",baseline=TRUE,Grid=10,main=txt,TC=2,PDF="lift-1")
+
+# Linear Regression models with variable selection (Numerical variables only)
+fit = lm(G3~age+Medu+Fedu+traveltime+studytime+failures+famrel+freetime+goout+Dalc+Walc+health+absences,data=math_train)
+summary(fit)
+
+library("bestglm")
+library("leaps")
+designx=cbind(math_train$age,math_train$Medu,math_train$Fedu, math_train$traveltime,math_train$studytime,math_train$failures,math_train$famrel,
+              math_train$freetime,math_train$goout,math_train$Dalc,math_train$Walc,math_train$health,
+              math_train$absences)
+Xy = cbind(as.data.frame(designx), math_train$G3)
+bestglm(Xy, IC = "AIC")$BestModel
+
+# BIC 
+bestglm(Xy, IC = "BIC")$BestModel
+
+# Backward Elmination 
+fit_full = lm(G3~age+Medu+Fedu+traveltime+studytime+failures+famrel+freetime+goout+Dalc+Walc+health+absences,data=math_train)
+fitB = step(fit_full, direction='backward')
+fitB
+
+# Model Diagnostic (# Use three tests for normality checking (majority voting))
+extresid = rstudent(fit)
+pred = predict(fit)
+
+### Externally studentized resiudal plot
+plot(pred, extresid)
+
+### Normal plot of extresid
+qqnorm(extresid)
+qqline(extresid)
+
+# Sharpio-Wilk test
+shapiro.test(extresid)
+
+# Cramer-von Mises test
+# install.packages('nortest')
+library(nortest)
+cvm.test(extresid)
+
+# Anderson-Darling test
+ad.test(extresid)
