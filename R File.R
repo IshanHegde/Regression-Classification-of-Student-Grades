@@ -2,6 +2,9 @@ library(rminer)
 library(ggplot2)
 library(gridExtra)
 library(ggExtra)
+library("plot3D")
+library(plot3Drgl)
+library(dplyr)
 URL="http://archive.ics.uci.edu/ml/machine-learning-databases/00320/student
 .zip"
 temp=tempfile() # temporary file
@@ -17,37 +20,83 @@ write.table(math,file="math.csv",row.names=FALSE,col.names=TRUE)
 math=read.table(file="math.csv",header=TRUE) # read previously saved file
 
 
-sum(math$Dalc=='2')
-
-hist(math$G3)
-
-plot(math$G1)
-math$Dalc
-
-length(math[math$sex=='F',]$G1)
-
-
-pMain = ggplot(math[math$sex=='F',], aes(x = G1, y = G2)) + geom_point()
-pTop = ggplot(math[math$sex=='F',], aes(x = G1)) + geom_histogram()
-pRight = ggplot(math[math$sex=='F',], aes(x = G2)) + geom_histogram() + coord_flip()
-pEmpty = ggplot(math[math$sex=='F',], aes(x = G1, y = G2)) +geom_blank() +theme(axis.text = element_blank(),axis.title = element_blank(),line = element_blank(),panel.background = element_blank())
-grid.arrange(pTop, pEmpty, pMain, pRight, ncol = 2, nrow = 2, widths = c(3, 1), heights = c(1, 3))
-
-
-pMain = ggplot(math[math$sex=='M',], aes(x = G1, y = G2)) + geom_point()
-pTop = ggplot(math[math$sex=='M',], aes(x = G1)) + geom_histogram()
-pRight = ggplot(math[math$sex=='M',], aes(x = G2)) + geom_histogram() + coord_flip()
-pEmpty = ggplot(math[math$sex=='M',], aes(x = G1, y = G2)) +geom_blank() +theme(axis.text = element_blank(),axis.title = element_blank(),line = element_blank(),panel.background = element_blank())
-grid.arrange(pTop, pEmpty, pMain, pRight, ncol = 2, nrow = 2, widths = c(3, 1), heights = c(1, 3))
-
-
-
-
-ggExtra::ggMarginal(ggplot(math, aes(math[math$sex=='F',]$G1, math[math$sex=='F',]$G2)) + geom_point())
 
 # EDA
 
 # Group comparision 
+
+
+scatter3D(math[math$sex=='F',]$G1,math[math$sex=='F',]$G2,math[math$sex=='F',]$G3,col = "blue",theta = 45, phi = 15)
+
+scatter3D(math[math$sex=='M',]$G1,math[math$sex=='M',]$G2,math[math$sex=='M',]$G3,col = "blue",theta = 45, phi = 15)
+
+temp_val = as.numeric(as.factor(math$sex))-1
+
+scatter3D(math$G1,math$G2,math$G3,colvar = as.numeric(as.factor(math$failures)),theta = 45,phi=30)
+
+
+
+count3d <- function(df,max_val,g_size)
+{
+  
+  return_val<- c()
+    
+  for(k in seq(0,max_val,by=g_size))
+  {
+    for(j in seq(0,max_val,by=g_size))
+    {
+      for(i in seq(0,max_val,by=g_size))
+      {
+        return_val<-c(return_val,nrow(filter(df,(x>i-1)&(x<i+g_size-1)&(y>j-1)&(y<j+g_size-1)&(z>k-1)&(z<k+g_size-1))))
+      }
+    }
+  }
+  
+  return(return_val)
+}
+
+get_df <- function(df,attribute_name,attribute_val)
+{
+  temp = df[df[,attribute_name]==attribute_val,]
+  r_val=data.frame(x=temp$G1,y=temp$G2,z=temp$G3)
+  return(r_val)
+}
+
+
+bootstrap_p<-function(count1,count2,B=10000)
+{
+  c1 = count1/sum(count1)
+  c2 = count2/sum(count2)
+  
+  count12 = count1+count2
+  tpi_0 = count12/sum(count12)
+  
+  tobs = 4*sum((sqrt(c1)-sqrt(c2))^2)*(sum(count1)*sum(count2)/sum(count12))
+  
+  Tnmb = rep(0,B)
+  for (i in 1:B)
+  {
+    Bcount1 = rmultinom(n=1,size=sum(count1),prob=tpi_0)
+    B1 = Bcount1/sum(Bcount1)
+    
+    Bcount2 =rmultinom(n=1,size=sum(count2),prob=tpi_0)
+    B2= Bcount2/sum(Bcount2)
+    
+    Bcount12=Bcount1+Bcount2
+    B12 = Bcount12/sum(Bcount12)
+    
+    Tnmb[i]= 4*sum((sqrt(B1)-sqrt(B2))^2)*(sum(Bcount1)*sum(Bcount2)/sum(Bcount12))
+  }
+  return(sum(Tnmb>=tobs)/B)
+  
+}
+
+
+bootstrap_p(count3d(get_df(math,'sex','M'),20,7),count3d(get_df(math,'sex','F'),20,7),10000)
+
+
+
+# Dr. Yu's 2d example
 
 g2treat_count = c(0,0,0,0,0,1,0,0,0,2,7,4,0,0,19,186)
 g2treat = g2treat_count/sum(g2treat_count)
@@ -85,14 +134,15 @@ for (i in 1:B)
   
   }
 
-
-
-
-
-
 pB = sum(Tnm_b>=T_obs)/B
 
 pB
+
+
+
+
+
+
 
 # Predictive modelling
 
