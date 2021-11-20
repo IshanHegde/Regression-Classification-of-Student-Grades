@@ -95,6 +95,7 @@ bootstrap_p<-function(count1,count2,B=10000)
 
 bootstrap_p(count3d(get_df(math,'sex','M'),20,7),count3d(get_df(math,'sex','F'),20,7),10000)
 
+for i in  
 
 
 # Dr. Yu's 2d example
@@ -191,10 +192,9 @@ factored_math =data.frame(unclass(math),stringsAsFactors=TRUE)
 
 math=factored_math
 
-bout=which(names(math)=="pass") 
-cat("output class:",class(math[,bout]),"\n")
 
-B1=fit(pass~.,math[,c(inputs)],model="rpart")
+
+B1=fit(pass~.,math[,c(inputs,bout)],model="rpart")
 print(B1@object)
 pdf("trees-1.pdf")
 plot(B1@object,uniform=TRUE,branch=0,compress=TRUE) 
