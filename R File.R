@@ -168,13 +168,59 @@ result=get_result(math,20,7,20000,0.05)
 print(result)
 
 
-
 # Predictive modelling
 library("caTools")
 set.seed(4993)
 math = read.csv('/Users/tom/OneDrive - HKUST Connect/MATH4993/Final.Project/student-mat.csv',sep = ',', head = T)
-colnames(mat)
+colnames(math)
 
+split = sample.split(math, SplitRatio = 0.8)
+math_train = subset(math, split == TRUE)
+math_test = subset(math, split == FALSE)
+
+# Linear Regression models with variable selection (Numerical variables only)
+fit = lm(G3~age+Medu+Fedu+traveltime+studytime+failures+famrel+freetime+goout+Dalc+Walc+health+absences,data=math_train)
+summary(fit)
+
+library("bestglm")
+library("leaps")
+designx=cbind(math_train$age,math_train$Medu,math_train$Fedu, math_train$traveltime,math_train$studytime,math_train$failures,math_train$famrel,
+              math_train$freetime,math_train$goout,math_train$Dalc,math_train$Walc,math_train$health,
+              math_train$absences)
+Xy = cbind(as.data.frame(designx), math_train$G3)
+bestglm(Xy, IC = "AIC")$BestModel
+
+# BIC 
+bestglm(Xy, IC = "BIC")$BestModel
+
+# Backward Elmination 
+fit_full = lm(G3~age+Medu+Fedu+traveltime+studytime+failures+famrel+freetime+goout+Dalc+Walc+health+absences,data=math_train)
+fitB = step(fit_full, direction='backward')
+fitB
+
+# Model Diagnostic (# Use three tests for normality checking (majority voting))
+extresid = rstudent(fit)
+pred = predict(fit)
+
+### Externally studentized resiudal plot
+plot(pred, extresid)
+
+### Normal plot of extresid
+qqnorm(extresid)
+qqline(extresid)
+
+# Sharpio-Wilk test
+shapiro.test(extresid)
+
+# Cramer-von Mises test
+# install.packages('nortest')
+library(nortest)
+cvm.test(extresid)
+
+# Anderson-Darling test
+ad.test(extresid)
+
+# rminer packages
 pass = cut(math$G3,c(-1,9,20),c('fail','pass'))
 five=cut(math$G3,c(-1,9,11,13,15,20),c("F","D","C","B","A"))
 
@@ -196,7 +242,7 @@ math=read.table(file="new_mat.csv",sep=',',header=TRUE)
 #math_test = subset(math, split == FALSE)
 
 # rminer packages
-inputs=2:29
+inputs=2:30
 bout=which(names(math)=="pass") 
 cat("output class:",class(math[,bout]),"\n")
 
@@ -204,8 +250,6 @@ cat("output class:",class(math[,bout]),"\n")
 # char-> string -> factor
 
 factored_math =data.frame(unclass(math),stringsAsFactors=TRUE)
-
-
 
 # Converting factors into numerical values  
 
@@ -215,10 +259,7 @@ factored_math =data.frame(unclass(math),stringsAsFactors=TRUE)
 #col_order <- c(c(colnames(math)))
 #out <- out1[,col_order]
 
-
 math=factored_math
-
-
 
 B1=fit(pass~.,math[,c(inputs,bout)],model="rpart")
 print(B1@object)
@@ -278,47 +319,15 @@ print(round(m,1)) # all prob metrics
 # ROC and LIFT curve: 
 txt=paste(levels(y)[2],"AUC:",round(mmetric(y,P2,metric="AUC",TC=2),2)) 
 mgraph(y,P2,graph="ROC",baseline=TRUE,Grid=10,main=txt,TC=2,PDF="roc-1") 
+
+I = Importance(B2, cmath[H$tr,])
+print(round(I$imp,digits=5)) 
+imax=which.max(I$imp)
+L=list(runs=1,sen=t(I$imp),sresponses=I$sresponses)
+par(mar=c(2.0,2.0,2.0,2.0))
+mgraph(L,graph="IMP",leg=names(cmath),col="gray",Grid=10,PDF="imp-1") 
+txt=paste("VEC curve for",names(cmath)[imax],"influence on class",levels(y) [TC])
+mgraph(L,graph="VEC",xval=imax,Grid=10,data=cmath[H$tr,],TC=1,main=txt,PDF= "vec-1")
+
 txt=paste(levels(y)[2],"ALIFT:",round(mmetric(y,P2,metric="ALIFT",TC=2),2)) 
 mgraph(y,P2,graph="LIFT",baseline=TRUE,Grid=10,main=txt,TC=2,PDF="lift-1")
-
-# Linear Regression models with variable selection (Numerical variables only)
-fit = lm(G3~age+Medu+Fedu+traveltime+studytime+failures+famrel+freetime+goout+Dalc+Walc+health+absences,data=math_train)
-summary(fit)
-
-library("bestglm")
-library("leaps")
-designx=cbind(math_train$age,math_train$Medu,math_train$Fedu, math_train$traveltime,math_train$studytime,math_train$failures,math_train$famrel,
-              math_train$freetime,math_train$goout,math_train$Dalc,math_train$Walc,math_train$health,
-              math_train$absences)
-Xy = cbind(as.data.frame(designx), math_train$G3)
-bestglm(Xy, IC = "AIC")$BestModel
-
-# BIC 
-bestglm(Xy, IC = "BIC")$BestModel
-
-# Backward Elmination 
-fit_full = lm(G3~age+Medu+Fedu+traveltime+studytime+failures+famrel+freetime+goout+Dalc+Walc+health+absences,data=math_train)
-fitB = step(fit_full, direction='backward')
-fitB
-
-# Model Diagnostic (# Use three tests for normality checking (majority voting))
-extresid = rstudent(fit)
-pred = predict(fit)
-
-### Externally studentized resiudal plot
-plot(pred, extresid)
-
-### Normal plot of extresid
-qqnorm(extresid)
-qqline(extresid)
-
-# Sharpio-Wilk test
-shapiro.test(extresid)
-
-# Cramer-von Mises test
-# install.packages('nortest')
-library(nortest)
-cvm.test(extresid)
-
-# Anderson-Darling test
-ad.test(extresid)
