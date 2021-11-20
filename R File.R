@@ -36,6 +36,7 @@ temp_val = as.numeric(as.factor(math$sex))-1
 scatter3D(math$G1,math$G2,math$G3,colvar = as.numeric(as.factor(math$failures)),theta = 45,phi=30)
 
 
+#Count the number of points in each 3d grid 
 
 count3d <- function(df,max_val,g_size)
 {
@@ -56,10 +57,23 @@ count3d <- function(df,max_val,g_size)
   return(return_val)
 }
 
+# auxiliary function that returns data frame of given attribute and attribute value 
+#and its response variables
+
 get_df <- function(df,attribute_name,attribute_val)
 {
   temp = df[df[,attribute_name]==attribute_val,]
   r_val=data.frame(x=temp$G1,y=temp$G2,z=temp$G3)
+  return(r_val)
+}
+
+# inverse of get_df, returns dataframe of attribute which does not equal the 
+# attribute value
+
+not_get_df <- function(df,attribute_name,attribute_val)
+{
+  temp =df[df[,attribute_name]!=attribute_val,]
+  r_val =data.frame(x=temp$G1,y=temp$G2,z=temp$G3)
   return(r_val)
 }
 
@@ -88,58 +102,70 @@ bootstrap_p<-function(count1,count2,B=10000)
     
     Tnmb[i]= 4*sum((sqrt(B1)-sqrt(B2))^2)*(sum(Bcount1)*sum(Bcount2)/sum(Bcount12))
   }
-  return(sum(Tnmb>=tobs)/B)
+  return_list<-list('p'=sum(Tnmb>=tobs)/B,'T'=Tnmb)
+  return(return_list)
   
 }
 
 
-bootstrap_p(count3d(get_df(math,'sex','M'),20,7),count3d(get_df(math,'sex','F'),20,7),10000)
+#res =bootstrap_p(count3d(get_df(math,'sex','M'),20,7),count3d(get_df(math,'sex','F'),20,7),20000)
 
-for i in  
+#res =bootstrap_p(count3d(get_df(math,'sex','M'),20,7),count3d(not_get_df(math,'sex','M'),20,7),20000)
 
 
-# Dr. Yu's 2d example
 
-g2treat_count = c(0,0,0,0,0,1,0,0,0,2,7,4,0,0,19,186)
-g2treat = g2treat_count/sum(g2treat_count)
+hist(res$T)
 
-g2control_count = c(rep(0,8),1,3,8,3,0,1,22,178)
-g2control = g2control_count/sum(g2control_count)
+length(unique(math[,3]))
 
-g2count =g2treat_count+g2control_count
-pi_0 = g2count/sum(g2count)
+length(math[])
 
-T_obs = 4*sum((sqrt(g2treat)-sqrt(g2control))^2)*(sum(g2treat_count)*sum(g2control_count)/sum(g2count))
+sum(math[,3]==unique(math[,3])[6])
 
-M=16
-p3 = 1-pchisq(T_obs,df=M-1)
 
-p3
+# Iterate through distribution comparison for all possible attributes and their values
 
-B= 100000
-Tnm_b = rep(0,B)
-
-for (i in 1:B)
+get_result <-function(df,max_val,grid_size,bootstrap_num,sig_level)
+{
+  result<-c()
+  for (i in 1:29)
   {
-  
-  g2treat_count
-  g2treat_Bcount =rmultinom(n=1,size=sum(g2treat_count),prob=pi_0)
-  g2treatB = g2treat_Bcount/sum(g2treat_Bcount)
-  
-  g2control_Bcount = rmultinom(n=1,size=sum(g2control_count),prob=pi_0)
-  g2controlB = g2control_Bcount/sum(g2control_Bcount)
-  
-  g2_Bcount=g2treat_Bcount +g2control_Bcount
-  g2B =g2_Bcount/sum(g2_Bcount)
-  
-  Tnm_b[i]=4*sum((sqrt(g2treatB)-sqrt(g2controlB))^2)*(sum(g2treat_Bcount)*sum(g2control_Bcount)/sum(g2_Bcount))
-  
+    
+    res <-c()
+    for (j in 1:length(unique(df[,i])))
+    {
+      
+      if(sum(df[,i]==unique(df[,i])[j])<25)
+      {
+        next
+      }
+      else
+      {
+        
+        p = bootstrap_p(count3d(get_df(df,colnames(df)[i],unique(df[,i])[j]),max_val,grid_size),count3d(not_get_df(df,colnames(df)[i],unique(df[,i])[j]),max_val,grid_size),bootstrap_num)$p
+        
+        if(p >=sig_level)
+        {
+          next
+        }
+        else
+        {
+          res <- c(res,unique(df[,i])[j],p)
+        }
+        
+      }
+      
+    }
+    result<-c(result,colnames(df)[i],res)
   }
+  return(result)
+}
 
-pB = sum(Tnm_b>=T_obs)/B
 
-pB
 
+result=get_result(math,20,7,20000,0.05)
+
+print(result)
 
 
 
