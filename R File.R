@@ -297,6 +297,7 @@ print(mmetric(math_test$pass,RF_pred,"AUC"))
 print(mmetric(math_test$pass,RF_pred,"CONF"))
 
 rf =randomForest(pass~.,data=math_train[,c(inputs,bout)],ntree=200)
+print(rf)
 imp = importance(rf)
 create_rfplot <- function(rf, type){
   imp <- importance(rf)
