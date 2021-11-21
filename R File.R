@@ -5,9 +5,7 @@ library(ggExtra)
 library("plot3D")
 library(plot3Drgl)
 library(dplyr)
-library(rminer)
-URL="http://archive.ics.uci.edu/ml/machine-learning-databases/00320/student
-.zip"
+URL="http://archive.ics.uci.edu/ml/machine-learning-databases/00320/student.zip"
 temp=tempfile() # temporary file
 download.file(URL,temp) # download file to temporary
 # unzip file and load into data.frame:
@@ -20,12 +18,9 @@ write.table(math,file="math.csv",row.names=FALSE,col.names=TRUE)
 
 math=read.table(file="math.csv",header=TRUE) # read previously saved file
 
-
-
 # EDA
 
 # Group comparision 
-
 
 scatter3D(math[math$sex=='F',]$G1,math[math$sex=='F',]$G2,math[math$sex=='F',]$G3,col = "blue",theta = 45, phi = 15)
 
@@ -218,6 +213,7 @@ ad.test(extresid)
 
 ## Not normal distribution, do transformation
 
+
 # Linear Regression models with variable selection (Numerical variables only)
 fit = lm(G3~age+Medu+Fedu+traveltime+studytime+failures+famrel+freetime+goout+Dalc+Walc+health+absences,data=math_train)
 summary(fit)
@@ -244,8 +240,8 @@ bout=which(names(math_train)=="pass")
 cat("output class:",class(math_train[,bout]),"\n")
 
 # char-> string -> factor
-factored_math =data.frame(unclass(math_train),stringsAsFactors=TRUE)
-
+factored_math_train =data.frame(unclass(math_train),stringsAsFactors=TRUE)
+factored_math_test =data.frame(unclass(math_test),stringsAsFactors=TRUE)
 # Converting factors into numerical values  
 
 #must_convert<-sapply(factored_math,is.factor)
@@ -254,18 +250,10 @@ factored_math =data.frame(unclass(math_train),stringsAsFactors=TRUE)
 #col_order <- c(c(colnames(math)))
 #out <- out1[,col_order]
 
-math_train = factored_math
-
-B1=fit(pass~.,math_train[,c(inputs,bout)],model="rpart")
-print(B1@object)
-plot(B1@object,uniform=TRUE,branch=0,compress=TRUE) 
-text(B1@object,xpd=TRUE,fancy=TRUE,fwidth=0.2,fheight=0.2) 
-
-B4=fit(pass~.,math_train[,c(inputs,bout)],model="ksvm") # fit a support vector machine 
-print(B4@object)
+math_train = factored_math_train
+math_test = factored_math_test
 
 # Random forest regression
-inputs = 2:30
 # select outputs: regression task 
 g3=which(names(math_train)=="G3") 
 cat("output class:",class(math_train[,g3]),"\n")
@@ -279,6 +267,52 @@ e1=mmetric(target1,P1,metric=c("MAE","R22"))
 error=paste("RF, holdout: MAE=",round(e1[1],2),", R2=",round(e1[2],2),sep=" ")
 mgraph(target1,P1,graph="RSC",Grid=10,main=error) 
 cat(error,"\n")
+
+# Binary classification
+dtree=fit(pass~.,math_train[,c(inputs,bout)],model="rpart")
+print(dtree@object)
+plot(dtree@object,uniform=TRUE,branch=0,compress=TRUE) 
+text(dtree@object,xpd=TRUE,fancy=TRUE,fwidth=0.2,fheight=0.2) 
+dtree_pred = predict(dtree,math_test)
+print(mmetric(math_test$pass,dtree_pred,"AUC"))
+print(mmetric(math_test$pass,dtree_pred,"CONF"))
+
+SVM=fit(pass~.,math_train[,c(inputs,bout)],model="ksvm",search=list(search=mparheuristic("ksvm"))) # fit a support vector machine 
+print(SVM@object)
+print(SVM@mpar)
+SVM_pred = predict(SVM,math_test)
+print(mmetric(math_test$pass,SVM_pred,"AUC"))
+print(mmetric(math_test$pass,SVM_pred,"CONF"))
+
+library(randomForest)
+# library(tidyverse)
+library(skimr)
+library(knitr)
+# search for mtry and ntree
+# s=list(smethod="grid",search=list(mtry=c(1,2,3),ntree=c(100,200,500)),convex=0,metric="AUC",method=c("kfold",5,12345))
+RF=fit(pass~.,math_train[,c(inputs,bout)],model="randomForest",ntree=200,importance=TRUE) # fit Random Forest
+print(RF@object)
+RF_pred = predict(RF,math_test)
+print(mmetric(math_test$pass,RF_pred,"AUC"))
+print(mmetric(math_test$pass,RF_pred,"CONF"))
+
+
+#You can use like this - Solution
+importance <- round(importance(RF), 2)
+print(importance )
+
+importance(RF)
+        
+xgboost=fit(pass~.,math_train[,c(inputs,bout)],model="xgboost") # XGBoost
+print(xgboost@object)
+xgboost_pred = predict(xgboost,math_test)
+print(mmetric(math_test$pass,xgboost_pred,"AUC"))
+# print(mmetric(math_test$pass,xgboost_pred,"CONF"))
+
+logisticr=fit(pass~.,math_train[,c(inputs,bout)],model="multinom",fmethod="sbs",transform="log") # Logistic Regression, sbs - standard backward selection
+print(logisticr@object)
+logistic_pred = predict(logisticr,math_test)
+print(mmetric(math_test$pass,logistic_pred,"CONF"))
 
 # Binary Classification
 bout=which(names(math_train)=="pass") 
@@ -350,3 +384,4 @@ mgraph(L,graph="REC",leg=c("randomForest","mr"),main="REC curve",xval=10,PDF="re
 
 # input importance 
 mgraph(M1,graph="imp",leg=names(rmath),xval=15,PDF="rec-2")
+
