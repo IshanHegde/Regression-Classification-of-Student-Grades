@@ -161,51 +161,48 @@ get_result <-function(df,max_val,grid_size,bootstrap_num,sig_level)
   return(result)
 }
 
-
-
 result=get_result(math,20,7,20000,0.05)
 
 print(result)
 
 
 # Predictive modelling
-library("caTools")
-set.seed(4993)
-math = read.csv('/Users/tom/OneDrive - HKUST Connect/MATH4993/Final.Project/student-mat.csv',sep = ',', head = T)
-colnames(math)
 
+# Convert G3 into binary and multiclass labels
+pass = cut(math$G3,c(-1,9,20),c('fail','pass'))
+five = cut(math$G3,c(-1,9,11,13,15,20),c("F","D","C","B","A"))
+
+par(mfrow=c(1,3)) 
+plot(pass,main="pass")
+plot(five,main="five") 
+hist(math$G3,col="gray",main="G3",xlab="")
+
+new_mat = cbind(math,pass,five) 
+write.table(new_mat,"new_mat.csv",sep=',',row.names=FALSE,col.names=TRUE)
+
+# Read the new data
+math = read.table(file="new_mat.csv",sep=',',header=TRUE)
+
+# Train test split
 split = sample.split(math, SplitRatio = 0.8)
 math_train = subset(math, split == TRUE)
 math_test = subset(math, split == FALSE)
 
-# Linear Regression models with variable selection (Numerical variables only)
-fit = lm(G3~age+Medu+Fedu+traveltime+studytime+failures+famrel+freetime+goout+Dalc+Walc+health+absences,data=math_train)
-summary(fit)
-
-library("bestglm")
-library("leaps")
-designx=cbind(math_train$age,math_train$Medu,math_train$Fedu, math_train$traveltime,math_train$studytime,math_train$failures,math_train$famrel,
-              math_train$freetime,math_train$goout,math_train$Dalc,math_train$Walc,math_train$health,
-              math_train$absences)
-Xy = cbind(as.data.frame(designx), math_train$G3)
-bestglm(Xy, IC = "AIC")$BestModel
-
-# BIC 
-bestglm(Xy, IC = "BIC")$BestModel
-
-# Backward Elmination 
-fit_full = lm(G3~age+Medu+Fedu+traveltime+studytime+failures+famrel+freetime+goout+Dalc+Walc+health+absences,data=math_train)
-fitB = step(fit_full, direction='backward')
-fitB
+# Oversampling (training set)
+library(ROSE) 
+over <- ovun.sample(pass~.,data=math_train,method="over",N=420)$data
+table(over$pass)
+summary(over)
+math_train = over
 
 # Model Diagnostic (# Use three tests for normality checking (majority voting))
 extresid = rstudent(fit)
 pred = predict(fit)
 
-### Externally studentized resiudal plot
+# Externally studentized resiudal plot
 plot(pred, extresid)
 
-### Normal plot of extresid
+# Normal plot of extresid
 qqnorm(extresid)
 qqline(extresid)
 
@@ -220,43 +217,15 @@ cvm.test(extresid)
 # Anderson-Darling test
 ad.test(extresid)
 
-# rminer packages
-pass = cut(math$G3,c(-1,9,20),c('fail','pass'))
-five=cut(math$G3,c(-1,9,11,13,15,20),c("F","D","C","B","A"))
+## Not normal distribution, do transformation
 
-pdf("math-grades.pdf")
-par(mfrow=c(1,3)) 
-plot(pass,main="pass")
-plot(five,main="five") 
-hist(math$G3,col="gray",main="G3",xlab="")
-dev.off() 
-
-new_mat = cbind(math,pass,five) 
-write.table(new_mat,"new_mat.csv",sep=',',row.names=FALSE,col.names=TRUE)
-
-math=read.table(file="new_mat.csv",sep=',',header=TRUE)
-
-
-# read the data file
-split = sample.split(math, SplitRatio = 0.8)
-math_train = subset(math, split == TRUE)
-math_test = subset(math, split == FALSE)
-#over sampling
-library(ROSE)
-data_balanced_over <- ovun.sample(pass~., data = math_train, method = "over",N =317)$data
-table(data_balanced_over$cls)
-
-
-
-# rminer packages
+# Use rminer package to build models
 inputs=2:30
-bout=which(names(math)=="pass") 
-cat("output class:",class(math[,bout]),"\n")
-
+bout=which(names(math_train)=="pass") 
+cat("output class:",class(math_train[,bout]),"\n")
 
 # char-> string -> factor
-
-factored_math =data.frame(unclass(math),stringsAsFactors=TRUE)
+factored_math =data.frame(unclass(math_train),stringsAsFactors=TRUE)
 
 # Converting factors into numerical values  
 
@@ -266,40 +235,36 @@ factored_math =data.frame(unclass(math),stringsAsFactors=TRUE)
 #col_order <- c(c(colnames(math)))
 #out <- out1[,col_order]
 
-math=factored_math
+math_train = factored_math
 
-B1=fit(pass~.,math[,c(inputs,bout)],model="rpart")
+B1=fit(pass~.,math_train[,c(inputs,bout)],model="rpart")
 print(B1@object)
-pdf("trees-1.pdf")
 plot(B1@object,uniform=TRUE,branch=0,compress=TRUE) 
 text(B1@object,xpd=TRUE,fancy=TRUE,fwidth=0.2,fheight=0.2) 
-dev.off()
 
-B4=fit(pass~.,math[,c(inputs,bout)],model="ksvm") # fit a support vector machine 
+B4=fit(pass~.,math_train[,c(inputs,bout)],model="ksvm") # fit a support vector machine 
 print(B4@object)
 
 # Random forest regression
 inputs = 2:30
 # select outputs: regression task 
-g3=which(names(math)=="G3") 
-cat("output class:",class(math[,g3]),"\n")
-H=holdout(math$G3,ratio=0.8,seed=4993)
+g3=which(names(math_train)=="G3") 
+cat("output class:",class(math_train[,g3]),"\n")
+H=holdout(math_train$G3,ratio=1,seed=4993)
 print("holdout:")
 print(summary(H))
-R1=fit(G3~.,math[H$tr,c(inputs,g3)],model="randomForest")
-P1=predict(R1,math[H$ts,c(inputs,g3)])
-target1=math[H$ts,]$G3
+R1=fit(G3~.,math_train[H$tr,c(inputs,g3)],model="randomForest")
+P1=predict(R1,math_test)
+target1=math_test$G3
 e1=mmetric(target1,P1,metric=c("MAE","R22"))
 error=paste("RF, holdout: MAE=",round(e1[1],2),", R2=",round(e1[2],2),sep=" ")
-pdf("rf-1.pdf") 
 mgraph(target1,P1,graph="RSC",Grid=10,main=error) 
-dev.off() 
 cat(error,"\n")
 
 # Binary Classification
-bout=which(names(math)=="pass") 
-cat("output class:",class(math[,bout]),"\n") 
-bmath=math[,c(inputs,bout)] # for easy use 
+bout=which(names(math_train)=="pass") 
+cat("output class:",class(math_train[,bout]),"\n") 
+bmath=math_train[,c(inputs,bout)] # for easy use 
 y=bmath$pass # target
 # fit rpart to all data, pure class modeling (no probabilities) 
 B1=fit(pass~.,bmath,model="rpart",task="class") # fit a decision tree 
@@ -339,11 +304,11 @@ mgraph(L,graph="VEC",xval=imax,Grid=10,data=cmath[H$tr,],TC=1,main=txt,PDF= "vec
 txt=paste(levels(y)[2],"ALIFT:",round(mmetric(y,P2,metric="ALIFT",TC=2),2)) 
 mgraph(y,P2,graph="LIFT",baseline=TRUE,Grid=10,main=txt,TC=2,PDF="lift-1")
 
-
+#
 inputs=1:32 # all except pass and five
-g3=which(names(math)=="G3")
-cat("output class:",class(math[,g3]),"\n")
-rmath=math[,c(inputs,g3)] # for easy use
+g3=which(names(math_train)=="G3")
+cat("output class:",class(math_train[,g3]),"\n")
+rmath=math_train[,c(inputs,g3)] # for easy use
 y=rmath$g3 # target
 
 # mining for randomForest, external 5-fold, 20 Runs (=100 fitted models)
