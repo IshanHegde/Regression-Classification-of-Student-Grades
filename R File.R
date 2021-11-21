@@ -268,6 +268,14 @@ error=paste("RF, holdout: MAE=",round(e1[1],2),", R2=",round(e1[2],2),sep=" ")
 mgraph(target1,P1,graph="RSC",Grid=10,main=error) 
 cat(error,"\n")
 
+SVM=fit(G3~.,math_train[H$tr,c(inputs,g3)],model="ksvm") # fit a support vector machine 
+P2 = predict(SVM,math_test)
+target2=math_test$G3
+e2=mmetric(target2,P2,metric=c("MAE","R22"))
+error=paste("SVM, holdout: MAE=",round(e2[1],2),", R2=",round(e2[2],2),sep=" ")
+mgraph(target2,P2,graph="RSC",Grid=10,main=error) 
+cat(error,"\n")
+
 # Binary classification
 dtree=fit(pass~.,math_train[,c(inputs,bout)],model="rpart")
 print(dtree@object)
@@ -317,10 +325,10 @@ rf_pred = predict(rf,math_test)
 print(mmetric(math_test$pass,rf_pred,"AUC"))
 print(mmetric(math_test$pass,rf_pred,"CONF"))
 
-xgboost=fit(pass~.,math_train[,c(inputs,bout)],model="xgboost") # XGBoost
-print(xgboost@object)
-xgboost_pred = predict(xgboost,math_test)
-print(mmetric(math_test$pass,xgboost_pred,"AUC"))
+#xgboost=fit(pass~.,math_train[,c(inputs,bout)],model="xgboost") # XGBoost
+#print(xgboost@object)
+#xgboost_pred = predict(xgboost,math_test)
+#print(mmetric(math_test$pass,xgboost_pred,"AUC"))
 # print(mmetric(math_test$pass,xgboost_pred,"CONF"))
 
 logisticr=fit(pass~.,math_train[,c(inputs,bout)],model="multinom",fmethod="sbs",transform="log") # Logistic Regression, sbs - standard backward selection
@@ -328,6 +336,7 @@ print(logisticr@object)
 logistic_pred = predict(logisticr,math_test)
 print(mmetric(math_test$pass,logistic_pred,"CONF"))
 
+library("catboost")
 ########################
 
 # Binary Classification
