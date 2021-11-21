@@ -290,19 +290,32 @@ library(skimr)
 library(knitr)
 # search for mtry and ntree
 # s=list(smethod="grid",search=list(mtry=c(1,2,3),ntree=c(100,200,500)),convex=0,metric="AUC",method=c("kfold",5,12345))
-RF=fit(pass~.,math_train[,c(inputs,bout)],model="randomForest",ntree=200,importance=TRUE) # fit Random Forest
+RF=fit(pass~.,math_train[,c(inputs,bout)],model="randomForest",ntree=200) # fit Random Forest
 print(RF@object)
 RF_pred = predict(RF,math_test)
 print(mmetric(math_test$pass,RF_pred,"AUC"))
 print(mmetric(math_test$pass,RF_pred,"CONF"))
 
+rf =randomForest(pass~.,data=math_train[,c(inputs,bout)],ntree=200)
+imp = importance(rf)
+create_rfplot <- function(rf, type){
+  imp <- importance(rf)
+  featureImportance <- data.frame(Feature = row.names(imp), Importance = imp[,1])
+  p <- ggplot(featureImportance, aes(x = reorder(Feature, Importance), y = Importance)) +
+    geom_bar(stat = "identity", fill = "#53cfff", width = 0.65) +
+    coord_flip() + 
+    theme_light(base_size = 20) +
+    theme(axis.title.x = element_text(size = 14, color = "black"),
+          axis.title.y = element_blank(),
+          axis.text.x  = element_text(size = 14, color = "black"),
+          axis.text.y  = element_text(size = 12, color = "black")) 
+  return(p)
+}
+create_rfplot(rf, type = 2)   
+rf_pred = predict(rf,math_test)
+print(mmetric(math_test$pass,rf_pred,"AUC"))
+print(mmetric(math_test$pass,rf_pred,"CONF"))
 
-#You can use like this - Solution
-importance <- round(importance(RF), 2)
-print(importance )
-
-importance(RF)
-        
 xgboost=fit(pass~.,math_train[,c(inputs,bout)],model="xgboost") # XGBoost
 print(xgboost@object)
 xgboost_pred = predict(xgboost,math_test)
