@@ -165,7 +165,6 @@ result=get_result(math,20,7,20000,0.05)
 
 print(result)
 
-
 # Predictive modelling
 
 # Convert G3 into binary and multiclass labels
@@ -219,7 +218,27 @@ ad.test(extresid)
 
 ## Not normal distribution, do transformation
 
-# Use rminer package to build models
+# Linear Regression models with variable selection (Numerical variables only)
+fit = lm(G3~age+Medu+Fedu+traveltime+studytime+failures+famrel+freetime+goout+Dalc+Walc+health+absences,data=math_train)
+summary(fit)
+
+library("bestglm")
+library("leaps")
+designx=cbind(math_train$age,math_train$Medu,math_train$Fedu, math_train$traveltime,math_train$studytime,math_train$failures,math_train$famrel,
+              math_train$freetime,math_train$goout,math_train$Dalc,math_train$Walc,math_train$health,
+              math_train$absences)
+Xy = cbind(as.data.frame(designx), math_train$G3)
+bestglm(Xy, IC = "AIC")$BestModel
+
+# BIC 
+bestglm(Xy, IC = "BIC")$BestModel
+
+# Backward Elmination 
+fit_full = lm(G3~age+Medu+Fedu+traveltime+studytime+failures+famrel+freetime+goout+Dalc+Walc+health+absences,data=math_train)
+fitB = step(fit_full, direction='backward')
+fitB
+
+## Use rminer package to build models
 inputs=2:30
 bout=which(names(math_train)=="pass") 
 cat("output class:",class(math_train[,bout]),"\n")
