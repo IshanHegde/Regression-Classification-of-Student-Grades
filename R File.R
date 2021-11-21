@@ -327,6 +327,8 @@ print(logisticr@object)
 logistic_pred = predict(logisticr,math_test)
 print(mmetric(math_test$pass,logistic_pred,"CONF"))
 
+########################
+
 # Binary Classification
 bout=which(names(math_train)=="pass") 
 cat("output class:",class(math_train[,bout]),"\n") 
