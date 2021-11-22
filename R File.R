@@ -336,7 +336,26 @@ print(logisticr@object)
 logistic_pred = predict(logisticr,math_test)
 print(mmetric(math_test$pass,logistic_pred,"CONF"))
 
-library("catboost")
+## load libraries required for analysis
+library(MLeval)
+library(caret)
+
+## simulate data
+im <- twoClassSim(2000, intercept = -25, linearVars = 20)
+table(im$Class)
+
+## run caret
+fitControl <- trainControl(method = "cv",summaryFunction=prSummary,
+                           classProbs=T,savePredictions = T,verboseIter = F)
+im_fit <- train(Class ~ ., data = im,method = "ranger",metric = "AUC",
+                trControl = fitControl)
+im_fit2 <- train(Class ~ ., data = im,method = "xgbTree",metric = "AUC",
+                 trControl = fitControl)
+
+## run MLeval
+x <- evalm(list(im_fit,im_fit2))
+
+## curves and metrics are in the 'x' list object
 ########################
 
 # Binary Classification
