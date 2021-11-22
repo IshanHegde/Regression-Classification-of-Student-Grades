@@ -331,6 +331,7 @@ create_rfplot(rf, type = 2)
 rf_pred = predict(rf,math_test)
 print(mmetric(math_test$pass,rf_pred,"AUC"))
 print(mmetric(math_test$pass,rf_pred,"CONF"))
+save(rf, file="/Users/tom/OneDrive - HKUST Connect/MATH4993/Final.Project/rf_binary.Rdata")
 
 #xgboost=fit(pass~.,math_train[,c(inputs,bout)],model="xgboost") # XGBoost
 #print(xgboost@object)
