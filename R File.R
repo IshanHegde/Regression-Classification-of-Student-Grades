@@ -183,7 +183,7 @@ set.seed(4993)
 split = sample.split(math, SplitRatio = 0.8)
 math_train = subset(math, split == TRUE)
 math_test = subset(math, split == FALSE)
-write.table(math_train,"math_train.csv",sep=',',row.names=FALSE,col.names=TRUE)
+#write.table(math_train,"math_train.csv",sep=',',row.names=FALSE,col.names=TRUE)
 
 
 # Oversampling (training set)
@@ -192,7 +192,7 @@ over <- ovun.sample(pass~.,data=math_train,method="over",N=418)$data
 table(over$pass)
 summary(over)
 math_train = over
-write.table(math_train,"math_over.csv",sep=',',row.names=FALSE,col.names=TRUE)
+#write.table(math_train,"math_over.csv",sep=',',row.names=FALSE,col.names=TRUE)
 
 # Model Diagnostic (# Use three tests for normality checking (majority voting))
 extresid = rstudent(fit)
@@ -312,11 +312,13 @@ print(mmetric(math_test$pass,RF_pred,"CONF"))
 rf =randomForest(pass~.,data=math_train[,c(inputs,bout)],ntree=200)
 print(rf)
 imp = importance(rf)
+
 create_rfplot <- function(rf, type){
   imp <- importance(rf)
   featureImportance <- data.frame(Feature = row.names(imp), Importance = imp[,1])
   p <- ggplot(featureImportance, aes(x = reorder(Feature, Importance), y = Importance)) +
-    geom_bar(stat = "identity", fill = "#53cfff", width = 0.65) +
+    geom_bar(stat = "identity",  fill = "deepskyblue4",width = 0.65) +
+    scale_fill_brewer(palette = "Spectral") +
     coord_flip() + 
     theme_light(base_size = 20) +
     theme(axis.title.x = element_text(size = 14, color = "black"),
@@ -340,97 +342,3 @@ logisticr=fit(pass~.,math_train[,c(inputs,bout)],model="multinom",fmethod="sbs",
 print(logisticr@object)
 logistic_pred = predict(logisticr,math_test)
 print(mmetric(math_test$pass,logistic_pred,"CONF"))
-
-## load libraries required for analysis
-library(MLeval)
-library(caret)
-
-## simulate data
-im <- twoClassSim(2000, intercept = -25, linearVars = 20)
-table(im$Class)
-
-## run caret
-fitControl <- trainControl(method = "cv",summaryFunction=prSummary,
-                           classProbs=T,savePredictions = T,verboseIter = F)
-im_fit <- train(Class ~ ., data = im,method = "ranger",metric = "AUC",
-                trControl = fitControl)
-im_fit2 <- train(Class ~ ., data = im,method = "xgbTree",metric = "AUC",
-                 trControl = fitControl)
-
-## run MLeval
-x <- evalm(list(im_fit,im_fit2))
-
-## curves and metrics are in the 'x' list object
-########################
-
-# Binary Classification
-bout=which(names(math_train)=="pass") 
-cat("output class:",class(math_train[,bout]),"\n") 
-bmath=math_train[,c(inputs,bout)] # for easy use 
-y=bmath$pass # target
-# fit rpart to all data, pure class modeling (no probabilities) 
-B1=fit(pass~.,bmath,model="rpart",task="class") # fit a decision tree 
-P1=predict(B1,bmath) # class predictions print(P1[1]) # show 1st prediction 
-m=mmetric(y,P1,metric=c("ACC","ACCLASS")) print(m) # accuracy, accuracy per class 
-m=mmetric(y,P1,metric=c("CONF")) # a) 
-print(m$conf) # confusion matrix 
-m=mmetric(y,P1,metric=c("ALL")) 
-print(round(m,1)) # all pure class metrics
-
-# fit rpart to all data, default probabilistic modeling 
-B2=fit(pass~.,bmath,model="rpart",task="prob") # fit a decision tree 
-P2=predict(B2,bmath) # predicted probabilities p
-rint(P2[1,]) # show 1st prediction 
-m=mmetric(y,P2,metric=c("ACC"),TC=2,D=0.5) 
-print(m) # accuracy, accuracy per class 
-m=mmetric(y,P2,metric=c("CONF"),TC=2,D=0.1) # equal to a) 
-print(m$conf) # confusion matrix 
-m =mmetric(y,P2,metric=c("AUC","AUCCLASS")) 
-print(m) # AUC, AUC per class 
-m=mmetric(y,P2,metric=c("ALL")) 
-print(round(m,1)) # all prob metrics
-
-# ROC and LIFT curve: 
-txt=paste(levels(y)[2],"AUC:",round(mmetric(y,P2,metric="AUC",TC=2),2)) 
-mgraph(y,P2,graph="ROC",baseline=TRUE,Grid=10,main=txt,TC=2,PDF="roc-1") 
-
-I = Importance(B2, cmath[H$tr,])
-print(round(I$imp,digits=5)) 
-imax=which.max(I$imp)
-L=list(runs=1,sen=t(I$imp),sresponses=I$sresponses)
-par(mar=c(2.0,2.0,2.0,2.0))
-mgraph(L,graph="IMP",leg=names(cmath),col="gray",Grid=10,PDF="imp-1") 
-txt=paste("VEC curve for",names(cmath)[imax],"influence on class",levels(y) [TC])
-mgraph(L,graph="VEC",xval=imax,Grid=10,data=cmath[H$tr,],TC=1,main=txt,PDF= "vec-1")
-
-txt=paste(levels(y)[2],"ALIFT:",round(mmetric(y,P2,metric="ALIFT",TC=2),2)) 
-mgraph(y,P2,graph="LIFT",baseline=TRUE,Grid=10,main=txt,TC=2,PDF="lift-1")
-
-#
-inputs=1:32 # all except pass and five
-g3=which(names(math_train)=="G3")
-cat("output class:",class(math_train[,g3]),"\n")
-rmath=math_train[,c(inputs,g3)] # for easy use
-y=rmath$g3 # target
-
-# mining for randomForest, external 5-fold, 20 Runs (=100 fitted models)
-M1=mining(G3~.,rmath,model="randomForest",method=c("kfold",5,123),Runs=20)
-m=mmetric(M1,metric=c("MAE","RMSE")) # 2 metrics:
-print(m) # show metrics for each run
-mi=meanint(m[,1])
-cat("RF MAE values:",round(mi$mean,2),"+-",round(mi$int,2),"\n")
-
-# regression scatter plot:
-txt=paste("G3 MAE:",round(mi$mean,2))
-mgraph(M1,graph="RSC",Grid=10,main=txt,PDF="rsc-1")
-
-# REC curve, comparison with multiple regression: "mr":
-M2=mining(G3~.,rmath,model="mr",method=c("kfold",5,123),Runs=20)
-L=vector("list",2) # list of minings
-L[[1]]=M1
-L[[2]]=M2
-mgraph(L,graph="REC",leg=c("randomForest","mr"),main="REC curve",xval=10,PDF="rec-1")
-
-# input importance 
-mgraph(M1,graph="imp",leg=names(rmath),xval=15,PDF="rec-2")
-
