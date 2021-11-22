@@ -343,3 +343,4 @@ logisticr=fit(pass~.,math_train[,c(inputs,bout)],model="multinom",fmethod="sbs",
 print(logisticr@object)
 logistic_pred = predict(logisticr,math_test)
 print(mmetric(math_test$pass,logistic_pred,"CONF"))
+save(logisticr, file="/Users/tom/OneDrive - HKUST Connect/MATH4993/Final.Project/logreg_binary.Rdata")
