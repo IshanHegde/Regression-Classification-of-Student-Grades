@@ -17,6 +17,7 @@ print(names(math)) # show attributes
 write.table(math,file="math.csv",row.names=FALSE,col.names=TRUE)
 
 math=read.table(file="math.csv",header=TRUE) # read previously saved file
+#math=read.table(file="/Users/tom/OneDrive - HKUST Connect/MATH4993/Final.Project/student-mat.csv",sep=',',header=TRUE) # read previously saved file
 
 # EDA
 
@@ -178,16 +179,20 @@ write.table(new_mat,"new_mat.csv",sep=',',row.names=FALSE,col.names=TRUE)
 math = read.table(file="new_mat.csv",sep=',',header=TRUE)
 
 # Train test split
+set.seed(4993) 
 split = sample.split(math, SplitRatio = 0.8)
 math_train = subset(math, split == TRUE)
 math_test = subset(math, split == FALSE)
+write.table(math_train,"math_train.csv",sep=',',row.names=FALSE,col.names=TRUE)
+
 
 # Oversampling (training set)
 library(ROSE) 
-over <- ovun.sample(pass~.,data=math_train,method="over",N=420)$data
+over <- ovun.sample(pass~.,data=math_train,method="over",N=418)$data
 table(over$pass)
 summary(over)
 math_train = over
+write.table(math_train,"math_over.csv",sep=',',row.names=FALSE,col.names=TRUE)
 
 # Model Diagnostic (# Use three tests for normality checking (majority voting))
 extresid = rstudent(fit)
