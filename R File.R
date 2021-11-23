@@ -159,6 +159,7 @@ plot(p_val,xlab = 'Bootstrap-N in 000\'s',ylab='p-value',main='Example Permutati
 hist(p_val,xlab='p-values',main='Histogram of p-value distribution')
 
 
+
 hist(res$T)
 
 result[1] 
@@ -252,6 +253,8 @@ get_mean_result <-function(df,res)
   return(ret)
 }
 
+
+#
 ltry <- linspace(0, 6, n = 100)
 ltry[21]
 lltry <- length(ltry)
@@ -309,6 +312,19 @@ write.table(new_mat,"new_mat.csv",sep=',',row.names=FALSE,col.names=TRUE)
 
 # Read the new data
 math = read.table(file="new_mat.csv",sep=',',header=TRUE)
+
+# Yeo Jognson transformation 
+ltry <- linspace(0, 6, n = 100)
+ltry[21]
+lltry <- length(ltry)
+psi <- matrix(as.numeric(NA),length(math$G3) , lltry)
+for (ii in 1:lltry)
+  psi[, ii] <- yeo.johnson(math$G3, lambda = ltry[ii])
+
+hist(psi[,21])
+shapiro.test(psi[,21])
+test = list(2,3)
+
 
 # Train test split
 set.seed(4993) 
