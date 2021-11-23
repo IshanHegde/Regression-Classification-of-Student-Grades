@@ -4,27 +4,43 @@ library(gridExtra)
 library(ggExtra)
 library("plot3D")
 library(plot3Drgl)
+library( plotly )
 library(dplyr)
 library(rminer)
+library(VGAM)
+library(pracma)
+library(arules)
 URL="http://archive.ics.uci.edu/ml/machine-learning-databases/00320/student
 .zip"
 temp=tempfile() # temporary file
 download.file(URL,temp) # download file to temporary
 # unzip file and load into data.frame:
 math=read.table(unz(temp,"student-mat.csv"),sep=";",header=TRUE)
+por=read.table(unz(temp,"student-por.csv"),sep=";",header=TRUE)
 cat("student performance math:",nelems(math),"\n")
+cat("student performance por:",nelems(por),"\n")
 print(class(math)) # show class
 print(names(math)) # show attributes
 # save data.frame to csv file:
 write.table(math,file="math.csv",row.names=FALSE,col.names=TRUE)
+write.table(por,file="por.csv",row.names=FALSE,col.names=TRUE)
 
 math=read.table(file="math.csv",header=TRUE) # read previously saved file
+por=read.table(file="por.csv",header=TRUE) # read previously saved file
 
+por = read.csv(file='student-por.csv',header=TRUE)
 
+math2=math
 
+temp=discretize(math2$absences,method='fixed',breaks=c(-1,10,Inf),labels=c(0,1))
+
+math2$absences=temp
+hist(as.numeric(temp))
+math2$absences=
 # EDA
 
 # Group comparision 
+
 
 
 scatter3D(math[math$sex=='F',]$G1,math[math$sex=='F',]$G2,math[math$sex=='F',]$G3,col = "blue",theta = 45, phi = 15)
@@ -78,6 +94,20 @@ not_get_df <- function(df,attribute_name,attribute_val)
 }
 
 
+
+get_mean <- function(df,attribute_name,attribute_val)
+{
+  
+  temp = df[df[,attribute_name]==attribute_val,]
+  temp2 = df[df[,attribute_name]!=attribute_val,]
+  res = c(attribute_name,attribute_val,round(mean(temp$G1),3),round(mean(temp$G2),3),round(mean(temp$G3),3))
+  res1= c(attribute_name,paste('not',attribute_val,sep=' '),round(mean(temp2$G1),3),round(mean(temp2$G2),3),round(mean(temp2$G3),3))
+  return(c(res,res1))
+  
+}
+
+get_mean(math,'sex','M')[1:5]
+
 bootstrap_p<-function(count1,count2,B=10000)
 {
   c1 = count1/sum(count1)
@@ -112,15 +142,22 @@ bootstrap_p<-function(count1,count2,B=10000)
 
 #res =bootstrap_p(count3d(get_df(math,'sex','M'),20,7),count3d(not_get_df(math,'sex','M'),20,7),20000)
 
+p_val= rep(0,300)
+for (i in 1:300)
+{
+  p_val[i]=bootstrap_p(count3d(get_df(math,'Mjob','teacher'),20,5),count3d(not_get_df(math,'Mjob','teacher'),20,5),1000*i)$p
+}
 
+plot(p_val,xlab = 'Bootstrap-N in 000\'s',ylab='p-value',main='Example Permutation Test\'s p-value distribution')
+
+hist(p_val,xlab='p-values',main='Histogram of p-value distribution')
 
 hist(res$T)
 
-length(unique(math[,3]))
+result[1] 
+vec=result[2]==unique(math[,result[1]])
 
-length(math[])
-
-sum(math[,3]==unique(math[,3])[6])
+TRUE %in% vec
 
 
 # Iterate through distribution comparison for all possible attributes and their values
@@ -128,7 +165,7 @@ sum(math[,3]==unique(math[,3])[6])
 get_result <-function(df,max_val,grid_size,bootstrap_num,sig_level)
 {
   result<-c()
-  for (i in 1:29)
+  for (i in 1:30)
   {
     
     res <-c()
@@ -161,9 +198,96 @@ get_result <-function(df,max_val,grid_size,bootstrap_num,sig_level)
   return(result)
 }
 
-result=get_result(math,20,7,20000,0.05)
+result=get_result(math2,20,5,300000,0.05)
 
-print(result)
+result2 = get_result(por,20,5,300000,0.05)
+
+hist(math$G3)
+
+print(result2)
+length(result2)
+k=2
+k=k+2
+get_mean_result <-function(df,res)
+{
+  ret <- c()
+  i=1
+  while (i<length(res)-1)
+  {
+    #print(i)
+    
+    vec=res[i+1]==(unique(df[,res[i]]))
+    #print(TRUE%in%vec)
+    if(TRUE%in%vec)
+    {
+
+      ret <- c(ret, get_mean(df,res[i],res[i+1])[1:5],res[i+2],get_mean(df,res[i],res[i+1])[6:10],res[i+2])
+      
+      i=i+3
+      vec2=res[i]==unique(df[,res[i-3]])
+      if(TRUE%in%vec2)
+      {
+        ret <- c(ret, get_mean(df,res[i-3],res[i])[1:5],res[i+1],get_mean(df,res[i-3],res[i])[6:10],res[i+1])
+        i=i+2
+        vec3 =res[i]==unique(df[,res[i-5]])
+        if(TRUE%in%vec3)
+        {
+          ret <- c(ret, get_mean(df,res[i-5],res[i])[1:5],res[i+1],get_mean(df,res[i-5],res[i])[6:10],res[i+1])
+          i=i+2
+        }
+      }
+    }
+    else
+    {
+      i=i+1
+    }
+    
+  }
+  return(ret)
+}
+
+ltry <- linspace(0, 6, n = 100)
+ltry[21]
+lltry <- length(ltry)
+psi <- matrix(as.numeric(NA),length(math$G3) , lltry)
+for (ii in 1:lltry)
+  psi[, ii] <- yeo.johnson(math$G3, lambda = ltry[ii])
+
+hist(psi[,21])
+shapiro.test(psi[,21])
+test = list(2,3)
+
+mat_mean=get_mean_result(math2,result)
+length(mat_mean)
+por_mean= get_mean_result(por,result2)
+length(por_mean)
+mat_mean = matrix(mat_mean,nrow=30,byrow=TRUE)
+
+mat_table=table(mat_mean)
+dim(mat_mean)
+write.csv( mat_mean,'mat_table.csv')
+
+por_mean = matrix(por_mean,nrow=54,byrow=TRUE)
+
+print(mat_mean)
+print(por_mean)
+
+
+length(por_mean)
+length(mat_mean)
+
+plot_attributes<-function(df,attribute_name,attribute_val)
+{
+  scatter3D(df$G1,df$G2,df$G3,colvar=df[,attribute_name]==attribute_val,colkey=list("1",'0'),cex=1,pch = 16,showscale = FALSE)
+  
+}
+
+plot_attributes(math,'studytime',1)
+
+result2
+
+get_mean(por,'failures',0)
+get_mean(por,'failures',1)
 
 # Predictive modelling
 
