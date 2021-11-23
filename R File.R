@@ -44,7 +44,11 @@ temp=discretize(math2$absences,method='fixed',breaks=c(-1,10,Inf),labels=c(0,1))
 
 math2$absences=temp
 hist(as.numeric(temp))
-math2$absences=
+
+por2 = por
+temp1 = discretize(por2$absences,method='fixed',breaks=c(-1,10,Inf),labels=c(0,1))
+por2$absences = temp1
+
 # EDA
 
 # Group comparision 
@@ -115,7 +119,7 @@ get_mean <- function(df,attribute_name,attribute_val)
 
 get_mean(math,'sex','M')[1:5]
 
-
+#generate permutations under the null hypothesis
 bootstrap_p<-function(count1,count2,B=10000)
 {
   c1 = count1/sum(count1)
@@ -207,14 +211,9 @@ get_result <-function(df,max_val,grid_size,bootstrap_num,sig_level)
 
 result=get_result(math2,20,5,300000,0.05)
 
-result2 = get_result(por,20,5,300000,0.05)
+result2 = get_result(por2,20,5,300000,0.05)
 
-hist(math$G3)
 
-print(result2)
-length(result2)
-k=2
-k=k+2
 get_mean_result <-function(df,res)
 {
   ret <- c()
@@ -254,21 +253,11 @@ get_mean_result <-function(df,res)
 }
 
 
-#
-ltry <- linspace(0, 6, n = 100)
-ltry[21]
-lltry <- length(ltry)
-psi <- matrix(as.numeric(NA),length(math$G3) , lltry)
-for (ii in 1:lltry)
-  psi[, ii] <- yeo.johnson(math$G3, lambda = ltry[ii])
 
-hist(psi[,21])
-shapiro.test(psi[,21])
-test = list(2,3)
 
 mat_mean=get_mean_result(math2,result)
 length(mat_mean)
-por_mean= get_mean_result(por,result2)
+por_mean= get_mean_result(por2,result2)
 length(por_mean)
 mat_mean = matrix(mat_mean,nrow=30,byrow=TRUE)
 
@@ -277,6 +266,9 @@ dim(mat_mean)
 write.csv( mat_mean,'mat_table.csv')
 
 por_mean = matrix(por_mean,nrow=54,byrow=TRUE)
+write.csv( por_mean,'mat_table.csv')
+
+
 
 print(mat_mean)
 print(por_mean)
