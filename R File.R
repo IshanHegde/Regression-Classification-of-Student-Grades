@@ -73,7 +73,6 @@ not_get_df <- function(df,attribute_name,attribute_val)
   return(r_val)
 }
 
-
 bootstrap_p<-function(count1,count2,B=10000)
 {
   c1 = count1/sum(count1)
@@ -100,15 +99,11 @@ bootstrap_p<-function(count1,count2,B=10000)
   }
   return_list<-list('p'=sum(Tnmb>=tobs)/B,'T'=Tnmb)
   return(return_list)
-  
 }
-
 
 #res =bootstrap_p(count3d(get_df(math,'sex','M'),20,7),count3d(get_df(math,'sex','F'),20,7),20000)
 
 #res =bootstrap_p(count3d(get_df(math,'sex','M'),20,7),count3d(not_get_df(math,'sex','M'),20,7),20000)
-
-
 
 hist(res$T)
 
@@ -117,7 +112,6 @@ length(unique(math[,3]))
 length(math[])
 
 sum(math[,3]==unique(math[,3])[6])
-
 
 # Iterate through distribution comparison for all possible attributes and their values
 
@@ -161,16 +155,14 @@ result=get_result(math,20,7,20000,0.05)
 
 print(result)
 
-# Predictive modelling
+## Predictive modelling
 
 # Convert G3 into binary and multiclass labels
 pass = cut(math$G3,c(-1,9,20),c('fail','pass'))
-five = cut(math$G3,c(-1,9,11,13,15,20),c("F","D","C","B","A"))
 
 par(mfrow=c(1,3)) 
 plot(pass,main="pass")
-plot(five,main="five") 
-hist(math$G3,col="gray",main="G3",xlab="")
+hist(math$G3,col="blue",main="G3",xlab="")
 
 new_mat = cbind(math,pass,five) 
 write.table(new_mat,"new_mat.csv",sep=',',row.names=FALSE,col.names=TRUE)
@@ -185,7 +177,6 @@ math_train = subset(math, split == TRUE)
 math_test = subset(math, split == FALSE)
 #write.table(math_train,"math_train.csv",sep=',',row.names=FALSE,col.names=TRUE)
 
-
 # Oversampling (training set)
 library(ROSE) 
 over <- ovun.sample(pass~.,data=math_train,method="over",N=418)$data
@@ -196,7 +187,7 @@ math_train = over
 
 # Model Diagnostic (# Use three tests for normality checking (majority voting))
 extresid = rstudent(fit)
-pred = predict(fit)
+pred = predictst(fit)
 
 # Externally studentized resiudal plot
 plot(pred, extresid)
