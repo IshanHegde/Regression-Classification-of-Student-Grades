@@ -6,13 +6,12 @@ library("plot3D")
 library(plot3Drgl)
 library( plotly )
 library(dplyr)
+library(olsrr)
 
 library(rminer)
 library(VGAM)
 library(pracma)
 library(arules)
-URL="http://archive.ics.uci.edu/ml/machine-learning-databases/00320/student
-.zip"
 
 URL="http://archive.ics.uci.edu/ml/machine-learning-databases/00320/student.zip"
 
@@ -37,18 +36,14 @@ por = read.csv(file='student-por.csv',header=TRUE)
 
 math2=math
 
-#math=read.table(file="/Users/tom/OneDrive - HKUST Connect/MATH4993/Final.Project/student-mat.csv",sep=',',header=TRUE) # read previously saved file
+#mat=read.table(file="/Users/tom/OneDrive - HKUST Connect/MATH4993/Final.Project/student-mat.csv",sep=',',header=TRUE) # read previously saved file
 
-
+math_train=read.table(file="math_train.csv",sep=',',header=TRUE)
 temp=discretize(math2$absences,method='fixed',breaks=c(-1,10,Inf),labels=c(0,1))
 
 math2$absences=temp
 hist(as.numeric(temp))
-
-por2 = por
-temp1 = discretize(por2$absences,method='fixed',breaks=c(-1,10,Inf),labels=c(0,1))
-por2$absences = temp1
-
+math2$absences=
 # EDA
 
 # Group comparision 
@@ -119,7 +114,7 @@ get_mean <- function(df,attribute_name,attribute_val)
 
 get_mean(math,'sex','M')[1:5]
 
-#generate permutations under the null hypothesis
+
 bootstrap_p<-function(count1,count2,B=10000)
 {
   c1 = count1/sum(count1)
@@ -161,7 +156,6 @@ for (i in 1:300)
 plot(p_val,xlab = 'Bootstrap-N in 000\'s',ylab='p-value',main='Example Permutation Test\'s p-value distribution')
 
 hist(p_val,xlab='p-values',main='Histogram of p-value distribution')
-
 
 
 hist(res$T)
@@ -211,9 +205,14 @@ get_result <-function(df,max_val,grid_size,bootstrap_num,sig_level)
 
 result=get_result(math2,20,5,300000,0.05)
 
-result2 = get_result(por2,20,5,300000,0.05)
+result2 = get_result(por,20,5,300000,0.05)
 
+hist(math$G3)
 
+print(result2)
+length(result2)
+k=2
+k=k+2
 get_mean_result <-function(df,res)
 {
   ret <- c()
@@ -252,12 +251,20 @@ get_mean_result <-function(df,res)
   return(ret)
 }
 
+ltry <- linspace(0, 6, n = 100)
+ltry[21]
+lltry <- length(ltry)
+psi <- matrix(as.numeric(NA),length(math_tr$G3) , lltry)
+for (ii in 1:lltry)
+  psi[, ii] <- yeo.johnson(math_tr$G3, lambda = ltry[ii])
 
-
+hist(psi[,21])
+shapiro.test(psi[,21])
+test = list(2,3)
 
 mat_mean=get_mean_result(math2,result)
 length(mat_mean)
-por_mean= get_mean_result(por2,result2)
+por_mean= get_mean_result(por,result2)
 length(por_mean)
 mat_mean = matrix(mat_mean,nrow=30,byrow=TRUE)
 
@@ -266,9 +273,6 @@ dim(mat_mean)
 write.csv( mat_mean,'mat_table.csv')
 
 por_mean = matrix(por_mean,nrow=54,byrow=TRUE)
-write.csv( por_mean,'mat_table.csv')
-
-
 
 print(mat_mean)
 print(por_mean)
@@ -303,39 +307,23 @@ new_mat = cbind(math,pass,five)
 write.table(new_mat,"new_mat.csv",sep=',',row.names=FALSE,col.names=TRUE)
 
 # Read the new data
-math = read.table(file="new_mat.csv",sep=',',header=TRUE)
-
-# Yeo Jognson transformation 
-ltry <- linspace(0, 6, n = 100)
-ltry[21]
-lltry <- length(ltry)
-psi <- matrix(as.numeric(NA),length(math$G3) , lltry)
-for (ii in 1:lltry)
-  psi[, ii] <- yeo.johnson(math$G3, lambda = ltry[ii])
-
-hist(psi[,21])
-shapiro.test(psi[,21])
-test = list(2,3)
-
+mat = read.table(file="new_mat.csv",sep=',',header=TRUE)
 
 # Train test split
 set.seed(4993) 
-split = sample.split(math, SplitRatio = 0.8)
-math_train = subset(math, split == TRUE)
-math_test = subset(math, split == FALSE)
+split = sample.split(mat, SplitRatio = 0.8)
+mat_train = subset(mat, split == TRUE)
+mat_test = subset(mat, split == FALSE)
 #write.table(math_train,"math_train.csv",sep=',',row.names=FALSE,col.names=TRUE)
-
-# Oversampling (training set)
-library(ROSE) 
-over <- ovun.sample(pass~.,data=math_train,method="over",N=418)$data
-table(over$pass)
-summary(over)
-math_train = over
-#write.table(math_train,"math_over.csv",sep=',',row.names=FALSE,col.names=TRUE)
+new_train = subset(mat_train, select = -c(G1) )
+new_test = subset(mat_test, select = -c(G1) )
+# Linear Regression models with variable selection (Numerical variables only)
+fit = lm(G3~age+Medu+Fedu+traveltime+studytime+failures+famrel+freetime+goout+Dalc+Walc+health+absences+G1,data=math_train)
+summary(fit)
 
 # Model Diagnostic (# Use three tests for normality checking (majority voting))
 extresid = rstudent(fit)
-pred = predictst(fit)
+pred = predict(fit)
 
 # Externally studentized resiudal plot
 plot(pred, extresid)
@@ -356,36 +344,63 @@ cvm.test(extresid)
 ad.test(extresid)
 
 ## Not normal distribution, do transformation
+# Yeo Jognson transformation 
+ltry <- linspace(0, 6, n = 100)
+ltry[21]
+lltry <- length(ltry)
+psi <- matrix(as.numeric(NA),length(math$G3) , lltry)
+for (ii in 1:lltry)
+  psi[, ii] <- yeo.johnson(math$G3, lambda = ltry[ii])
+
+hist(psi[,21])
+shapiro.test(psi[,21])
+test = list(2,3)
 
 
 # Linear Regression models with variable selection (Numerical variables only)
-fit = lm(G3~age+Medu+Fedu+traveltime+studytime+failures+famrel+freetime+goout+Dalc+Walc+health+absences,data=math_train)
+fit = lm(psi[,21]~age+Medu+Fedu+traveltime+studytime+failures+famrel+freetime+goout+Dalc+Walc+health+absences+G1,data=math_train)
 summary(fit)
 
-library("bestglm")
-library("leaps")
-designx=cbind(math_train$age,math_train$Medu,math_train$Fedu, math_train$traveltime,math_train$studytime,math_train$failures,math_train$famrel,
-              math_train$freetime,math_train$goout,math_train$Dalc,math_train$Walc,math_train$health,
-              math_train$absences)
-Xy = cbind(as.data.frame(designx), math_train$G3)
-bestglm(Xy, IC = "AIC")$BestModel
+# Model Diagnostic (# Use three tests for normality checking (majority voting))
+extresid = rstudent(fit)
+pred = predict(fit)
 
-# BIC 
-bestglm(Xy, IC = "BIC")$BestModel
+# Externally studentized resiudal plot
+plot(pred, extresid)
 
-# Backward Elmination 
-fit_full = lm(G3~age+Medu+Fedu+traveltime+studytime+failures+famrel+freetime+goout+Dalc+Walc+health+absences,data=math_train)
-fitB = step(fit_full, direction='backward')
-fitB
+# Normal plot of extresid
+qqnorm(extresid)
+qqline(extresid)
+
+# Sharpio-Wilk test
+shapiro.test(extresid)
+
+# Cramer-von Mises test
+# install.packages('nortest')
+library(nortest)
+cvm.test(extresid)
+
+# Anderson-Darling test
+ad.test(extresid)
+
+
+# Oversampling (training set)
+library(ROSE) 
+over <- ovun.sample(pass~.,data=math_train,method="over",N=418)$data
+table(over$pass)
+summary(over)
+math_train = over
+#write.table(math_train,"math_over.csv",sep=',',row.names=FALSE,col.names=TRUE)
+
 
 ## Use rminer package to build models
-inputs=2:30
-bout=which(names(math_train)=="pass") 
-cat("output class:",class(math_train[,bout]),"\n")
+inputs=2:31
+bout=which(names(new_train)=="pass") 
+cat("output class:",class(new_train[,bout]),"\n")
 
 # char-> string -> factor
-factored_math_train =data.frame(unclass(math_train),stringsAsFactors=TRUE)
-factored_math_test =data.frame(unclass(math_test),stringsAsFactors=TRUE)
+factored_math_train =data.frame(unclass(new_train),stringsAsFactors=TRUE)
+factored_math_test =data.frame(unclass(new_test),stringsAsFactors=TRUE)
 # Converting factors into numerical values  
 
 #must_convert<-sapply(factored_math,is.factor)
@@ -394,8 +409,8 @@ factored_math_test =data.frame(unclass(math_test),stringsAsFactors=TRUE)
 #col_order <- c(c(colnames(math)))
 #out <- out1[,col_order]
 
-math_train = factored_math_train
-math_test = factored_math_test
+new_train = factored_math_train
+new_test = factored_math_test
 
 # Random forest regression
 # select outputs: regression task 
@@ -404,7 +419,7 @@ cat("output class:",class(math_train[,g3]),"\n")
 H=holdout(math_train$G3,ratio=1,seed=4993)
 print("holdout:")
 print(summary(H))
-R1=fit(G3~.,math_train[H$tr,c(inputs,g3)],model="randomForest")
+R1=fit(G3~.,math_train[H$tr,c(inputs,g3)],model="randomForest",ntree=300)
 P1=predict(R1,math_test)
 target1=math_test$G3
 e1=mmetric(target1,P1,metric=c("MAE","R22"))
@@ -421,37 +436,38 @@ mgraph(target2,P2,graph="RSC",Grid=10,main=error)
 cat(error,"\n")
 
 # Binary classification
-dtree=fit(pass~.,math_train[,c(inputs,bout)],model="rpart")
-print(dtree@object)
-plot(dtree@object,uniform=TRUE,branch=0,compress=TRUE) 
-text(dtree@object,xpd=TRUE,fancy=TRUE,fwidth=0.2,fheight=0.2) 
-dtree_pred = predict(dtree,math_test)
-print(mmetric(math_test$pass,dtree_pred,"AUC"))
-print(mmetric(math_test$pass,dtree_pred,"CONF"))
+dtree=fit(pass~.,new_train[,c(inputs,bout)],model="rpart")
+#print(dtree@object)
+#plot(dtree@object,uniform=TRUE,branch=0,compress=TRUE) 
+#text(dtree@object,xpd=TRUE,fancy=TRUE,fwidth=0.2,fheight=0.2) 
+dtree_pred = predict(dtree,new_test)
+print(mmetric(new_test$pass,dtree_pred,"AUC"))
+print(mmetric(new_test$pass,dtree_pred,"CONF"))
 
-SVM=fit(pass~.,math_train[,c(inputs,bout)],model="ksvm",search=list(search=mparheuristic("ksvm"))) # fit a support vector machine 
+SVM=fit(pass~.,new_train[,c(inputs,bout)],model="ksvm",search=list(search=mparheuristic("ksvm"))) # fit a support vector machine 
 print(SVM@object)
 print(SVM@mpar)
-SVM_pred = predict(SVM,math_test)
-print(mmetric(math_test$pass,SVM_pred,"AUC"))
-print(mmetric(math_test$pass,SVM_pred,"CONF"))
+SVM_pred = predict(SVM,new_test)
+print(mmetric(new_test$pass,SVM_pred,"AUC"))
+print(mmetric(new_test$pass,SVM_pred,"CONF"))
 
 library(randomForest)
-# library(tidyverse)
+library(tidyverse)
 library(skimr)
 library(knitr)
 # search for mtry and ntree
-# s=list(smethod="grid",search=list(mtry=c(1,2,3),ntree=c(100,200,500)),convex=0,metric="AUC",method=c("kfold",5,12345))
-RF=fit(pass~.,math_train[,c(inputs,bout)],model="randomForest",ntree=200) # fit Random Forest
+#s=list(smethod="grid",search=list(mtry=c(1,2,3,4,5),ntree=c(100,200,500)),convex=0,metric="F1",method=c("kfold",5,12345))
+s=list(smethod="grid",search=list(mtry=c(1,2,3,4,5),ntree=c(100,200,500)),convex=0,metric="F1",method=c("kfold",5,12345))
+RF=fit(pass~.,math_train[,c(inputs,bout)],model="randomForest",trControl=s) # fit Random Forest
 print(RF@object)
 RF_pred = predict(RF,math_test)
 print(mmetric(math_test$pass,RF_pred,"AUC"))
 print(mmetric(math_test$pass,RF_pred,"CONF"))
 
-rf =randomForest(pass~.,data=math_train[,c(inputs,bout)],ntree=200)
+s=list(smethod="grid",search=list(mtry=c(1,2,3,4,5),ntree=c(100,200,300,400,500)),convex=c(0,1,2))
+rf =randomForest(pass~.,data=new_train[,c(inputs,bout)],trControl=s, importance=TRUE)
 print(rf)
 imp = importance(rf)
-
 create_rfplot <- function(rf, type){
   imp <- importance(rf)
   featureImportance <- data.frame(Feature = row.names(imp), Importance = imp[,1])
@@ -467,19 +483,37 @@ create_rfplot <- function(rf, type){
   return(p)
 }
 create_rfplot(rf, type = 2)   
-rf_pred = predict(rf,math_test)
-print(mmetric(math_test$pass,rf_pred,"AUC"))
-print(mmetric(math_test$pass,rf_pred,"CONF"))
-save(rf, file="/Users/tom/OneDrive - HKUST Connect/MATH4993/Final.Project/rf_binary.Rdata")
-
-#xgboost=fit(pass~.,math_train[,c(inputs,bout)],model="xgboost") # XGBoost
-#print(xgboost@object)
-#xgboost_pred = predict(xgboost,math_test)
-#print(mmetric(math_test$pass,xgboost_pred,"AUC"))
-# print(mmetric(math_test$pass,xgboost_pred,"CONF"))
+rf_pred = predict(rf,new_test)
+#print(mmetric(math_test$pass,rf_pred,"AUC"))
+print(mmetric(new_test$pass,rf_pred,"CONF"))
+#save(rf, file="/Users/tom/OneDrive - HKUST Connect/MATH4993/Final.Project/rf_binary.Rdata")
 
 logisticr=fit(pass~.,math_train[,c(inputs,bout)],model="multinom",fmethod="sbs",transform="log") # Logistic Regression, sbs - standard backward selection
 print(logisticr@object)
 logistic_pred = predict(logisticr,math_test)
 print(mmetric(math_test$pass,logistic_pred,"CONF"))
-save(logisticr, file="/Users/tom/OneDrive - HKUST Connect/MATH4993/Final.Project/logreg_binary.Rdata")
+#save(logisticr, file="/Users/tom/OneDrive - HKUST Connect/MATH4993/Final.Project/logreg_binary.Rdata")
+
+
+
+
+
+
+###
+#variable selection
+######
+library("bestglm")
+library("leaps")
+designx=cbind(math_train$age,math_train$Medu,math_train$Fedu, math_train$traveltime,math_train$studytime,math_train$failures,math_train$famrel,
+              math_train$freetime,math_train$goout,math_train$Dalc,math_train$Walc,math_train$health,
+              math_train$absences)
+Xy = cbind(as.data.frame(designx), math_train$G3)
+bestglm(Xy, IC = "AIC")$BestModel
+
+# BIC 
+bestglm(Xy, IC = "BIC")$BestModel
+
+# Backward Elmination 
+fit_full = lm(G3~age+Medu+Fedu+traveltime+studytime+failures+famrel+freetime+goout+Dalc+Walc+health+absences,data=math_train)
+fitB = step(fit_full, direction='backward')
+fitB
