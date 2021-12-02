@@ -349,14 +349,12 @@ plot(h, xlab = "G3", ylab = "Frequency", main = "Histogram of G3",col="gray")
 
 ## Not normal distribution, do transformation
 # Yeo Johnson transformation 
-ltry <- linspace(0, 6, n = 100)
-lltry <- length(ltry)
+ltry = linspace(0, 6, n = 100)
+lltry = length(ltry)
 psi <- matrix(as.numeric(NA),length(math_train$G3) , lltry)
 for (ii in 1:lltry)
-  psi[, ii] <- yeo.johnson(math_train$G3, lambda = ltry[ii])
-
-h = hist(psi[,24], plot = FALSE)
-plot(h, xlab = "G3", ylab = "Frequency", main = "Histogram of G3",col="gray")
+  psi[, ii] = yeo.johnson(math_train$G3, lambda = ltry[ii])
+boxCox(linreg, family="yjPower")
 
 # Linear Regression models with variable selection (Numerical variables only)
 linreg = lm(psi[,24]~age+Medu+Fedu+traveltime+studytime+failures+famrel+freetime+goout+Dalc+Walc+health+absences+G1,data=math_train)
