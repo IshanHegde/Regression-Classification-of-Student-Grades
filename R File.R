@@ -316,15 +316,15 @@ math_test = subset(math, split == FALSE)
 math_train = subset(math_train, select = -c(G1) )
 math_test = subset(math_test, select = -c(G1) )
 # Linear Regression models with variable selection (Numerical variables only)
-fit = lm(G3~age+Medu+Fedu+traveltime+studytime+failures+famrel+freetime+goout+Dalc+Walc+health+absences+G1,data=math_train)
-summary(fit)
+linreg = lm(G3~age+Medu+Fedu+traveltime+studytime+failures+famrel+freetime+goout+Dalc+Walc+health+absences+G1,data=math_train)
+summary(linreg)
 
 # Check VIF
-ols_vif_tol(fit)
+ols_vif_tol(linreg)
 
 # Model Diagnostic (# Use three tests for normality checking (majority voting))
-extresid = rstudent(fit)
-pred = predict(fit)
+extresid = rstudent(linreg)
+pred = predict(linreg)
 
 # Externally studentized resiudal plot
 plot(pred, extresid)
@@ -346,6 +346,7 @@ ad.test(extresid)
 
 h = hist(math_train$G3, plot = FALSE)
 plot(h, xlab = "G3", ylab = "Frequency", main = "Histogram of G3",col="gray")
+
 ## Not normal distribution, do transformation
 # Yeo Johnson transformation 
 ltry <- linspace(0, 6, n = 100)
@@ -358,9 +359,9 @@ h = hist(psi[,24], plot = FALSE)
 plot(h, xlab = "G3", ylab = "Frequency", main = "Histogram of G3",col="gray")
 
 # Linear Regression models with variable selection (Numerical variables only)
-fit = lm(psi[,24]~age+Medu+Fedu+traveltime+studytime+failures+famrel+freetime+goout+Dalc+Walc+health+absences+G1,data=math_train)
-extresid = rstudent(fit)
-pred = predict(fit)
+linreg = lm(psi[,24]~age+Medu+Fedu+traveltime+studytime+failures+famrel+freetime+goout+Dalc+Walc+health+absences+G1,data=math_train)
+extresid = rstudent(linreg)
+pred = predict(linreg)
 plot(pred, extresid)
 qqnorm(extresid)
 qqline(extresid)
@@ -382,9 +383,9 @@ mat_testY = math_test[,"pass"]
 #write.table(math_train,"math_over.csv",sep=',',row.names=FALSE,col.names=TRUE)
 
 ## Use rminer package to build models
-inputs=2:31
-bout=which(names(math_train)=="pass") 
-cat("output class:",class(math_train[,bout]),"\n")
+X = 2:31
+Y = which(names(math_train)=="pass") 
+cat("output class:",class(math_train[,Y]),"\n")
 
 # char-> string -> factor
 factored_math_train = data.frame(unclass(math_train),stringsAsFactors=TRUE)
@@ -406,14 +407,14 @@ cat("output class:",class(math_train[,g3]),"\n")
 hold = holdout(math_train$G3,ratio=1,seed=4993)
 
 # Random forest regression
-rf_score = fit(G3~.,math_train[hold$tr,c(inputs,g3)],model="randomForest",ntree=500)
+rf_score = fit(G3~.,math_train[hold$tr,c(X,g3)],model="randomForest",ntree=500)
 rf_score_pred = predict(rf_score,math_test)
 rf_error = mmetric(y,rf_score_pred,metric=c("RMSE","MAE","R22"))
 error = paste("RF, RMSE=",round(rf_error[1],2),", MAE=",round(rf_error[2],2),", R2=",round(rf_error[3],2),sep=" ")
 mgraph(y,rf_score_pred,graph="RSC",main="Random Forest") 
 cat(error,"\n")
 
-SVM_score = fit(G3~.,math_train[H$tr,c(inputs,g3)],model="ksvm",kernel="laplacedot",C=4)
+SVM_score = fit(G3~.,math_train[H$tr,c(X,g3)],model="ksvm",kernel="laplacedot",C=4)
 SVM_score_pred = predict(SVM_score,math_test)
 SVM_error = mmetric(y,SVM_score_pred,metric=c("RMSE","MAE","R22"))
 error = paste("SVM, =",round(SVM_error[1],2),", MAE=",round(SVM_error[2],2),", R2=",round(SVM_error[3],2),sep=" ")
@@ -424,12 +425,12 @@ cat(error,"\n")
 
 # Decision Tree
 require(tree)
-dtree=tree(pass~.,math_train[,c(inputs,bout)])
+dtree = tree(pass~.,math_train[,c(X,Y)])
 dtree_pred = predict(dtree,math_test)
 print(mmetric(math_test$pass,dtree_pred,"CONF"))
 
 # SVM
-SVM = fit(pass~.,math_train[,c(inputs,bout)],model="ksvm",kernel="laplacedot",C=4) # fit a support vector machine 
+SVM = fit(pass~.,math_train[,c(X,Y)],model="ksvm",kernel="laplacedot",C=4) # fit a support vector machine 
 SVM_pred = predict(SVM,math_test)
 print(mmetric(math_test$pass,SVM_pred,"CONF"))
 
@@ -438,12 +439,12 @@ library(randomForest)
 library(tidyverse)
 library(skimr)
 library(knitr)
-s=list(smethod="grid",search=list(mtry=c(1,2,3,4,5),ntree=c(100,200,300,400,450,500,600,700,800)),convex=c(0,1,2))
-rf =randomForest(pass~.,data=math_train[,c(inputs,bout)],trControl=s, importance=TRUE)
+s = list(smethod="grid",search=list(mtry=c(1,2,3,4,5),ntree=c(100,200,300,400,450,500,600,700,800)),convex=c(0,1,2))
+rf = randomForest(pass~.,data=math_train[,c(X,Y)],trControl=s, importance=TRUE)
 print(rf)
 imp = importance(rf)
-create_rfplot <- function(rf, type){
-  imp <- importance(rf)
+create_rfplot = function(rf, type){
+  imp = importance(rf)
   featureImportance <- data.frame(Feature = row.names(imp), Importance = imp[,1])
   p <- ggplot(featureImportance, aes(x = reorder(Feature, Importance), y = Importance)) +
     geom_bar(stat = "identity",  fill = "deepskyblue4",width = 0.65) +
