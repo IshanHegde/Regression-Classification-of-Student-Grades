@@ -414,6 +414,7 @@ error = paste("RF, RMSE=",round(rf_error[1],2),", MAE=",round(rf_error[2],2),", 
 mgraph(y,rf_score_pred,graph="RSC",main="Random Forest") 
 cat(error,"\n")
 
+# SVR
 SVM_score = fit(G3~.,math_train[H$tr,c(X,g3)],model="ksvm",kernel="laplacedot",C=4)
 SVM_score_pred = predict(SVM_score,math_test)
 SVM_error = mmetric(y,SVM_score_pred,metric=c("RMSE","MAE","R22"))
