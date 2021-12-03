@@ -253,14 +253,6 @@ get_mean_result <-function(df,res)
   return(ret)
 }
 
-ltry <- linspace(0, 6, n = 100)
-lltry <- length(ltry)
-psi <- matrix(as.numeric(NA),length(math_tr$G3) , lltry)
-for (ii in 1:lltry)
-  psi[, ii] <- yeo.johnson(math_tr$G3, lambda = ltry[ii])
-
-hist(psi[,24])
-shapiro.test(psi[,24])
 test = list(2,3)
 
 mat_mean=get_mean_result(math2,result)
@@ -351,7 +343,7 @@ plot(h, xlab = "G3", ylab = "Frequency", main = "Histogram of G3",col="gray")
 # Yeo Johnson transformation 
 ltry = linspace(0, 6, n = 100)
 lltry = length(ltry)
-psi <- matrix(as.numeric(NA),length(math_train$G3) , lltry)
+psi = matrix(as.numeric(NA),length(math_train$G3) , lltry)
 for (ii in 1:lltry)
   psi[, ii] = yeo.johnson(math_train$G3, lambda = ltry[ii])
 boxCox(linreg, family="yjPower")
@@ -370,7 +362,7 @@ ad.test(extresid)
 
 # Oversampling (training set)
 library(ROSE) 
-over <- ovun.sample(pass~.,data=math_train,method="over",N=418)$data
+over = ovun.sample(pass~.,data=math_train,method="over",N=418)$data
 table(over$pass)
 summary(over)
 math_train = over
@@ -444,8 +436,8 @@ print(rf)
 imp = importance(rf)
 create_rfplot = function(rf, type){
   imp = importance(rf)
-  featureImportance <- data.frame(Feature = row.names(imp), Importance = imp[,1])
-  p <- ggplot(featureImportance, aes(x = reorder(Feature, Importance), y = Importance)) +
+  featureImportance = data.frame(Feature = row.names(imp), Importance = imp[,1])
+  p = ggplot(featureImportance, aes(x = reorder(Feature, Importance), y = Importance)) +
     geom_bar(stat = "identity",  fill = "deepskyblue4",width = 0.65) +
     scale_fill_brewer(palette = "Spectral") +
     coord_flip() + 
