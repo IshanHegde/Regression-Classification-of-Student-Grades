@@ -6,7 +6,13 @@ library("plot3D")
 library(plot3Drgl)
 library( plotly )
 library(dplyr)
+<<<<<<< Updated upstream
 library(olsrr)
+=======
+library(caTools)
+library(rminer)
+library(rgl)
+>>>>>>> Stashed changes
 library(VGAM)
 library(pracma)
 library(arules)
@@ -42,12 +48,23 @@ math2=math
 
 #mat=read.table(file="/Users/tom/OneDrive - HKUST Connect/MATH4993/Final.Project/student-mat.csv",sep=',',header=TRUE) # read previously saved file
 
+<<<<<<< Updated upstream
 math_train=read.table(file="math_train.csv",sep=',',header=TRUE)
 temp=discretize(math2$absences,method='fixed',breaks=c(-1,10,Inf),labels=c(0,1))
+=======
+temp=discretize(math2$absences,breaks = 3,labels=c(1,2,3))
+temp
+>>>>>>> Stashed changes
 
-math2$absences=temp
+math2$absences=as.numeric(temp)
 hist(as.numeric(temp))
+<<<<<<< Updated upstream
 math2$absences=
+=======
+
+hist(math$absences)
+
+>>>>>>> Stashed changes
 # EDA
 
 # Group comparision 
@@ -115,7 +132,8 @@ get_mean <- function(df,attribute_name,attribute_val)
   
 }
 
-get_mean(math,'sex','M')[1:5]
+math2$a
+get_mean(math2,'absences',1)
 
 bootstrap_p<-function(count1,count2,B=10000)
 {
@@ -159,13 +177,14 @@ plot(p_val,xlab = 'Bootstrap-N in 000\'s',ylab='p-value',main='Example Permutati
 
 hist(p_val,xlab='p-values',main='Histogram of p-value distribution')
 
+<<<<<<< Updated upstream
+=======
+hist(Tnmb)
+>>>>>>> Stashed changes
 
 hist(res$T)
 
-result[1] 
-vec=result[2]==unique(math[,result[1]])
 
-TRUE %in% vec
 
 # Iterate through distribution comparison for all possible attributes and their values
 
@@ -259,7 +278,7 @@ mat_mean=get_mean_result(math2,result)
 length(mat_mean)
 por_mean= get_mean_result(por,result2)
 length(por_mean)
-mat_mean = matrix(mat_mean,nrow=30,byrow=TRUE)
+mat_mean = matrix(mat_mean,nrow=34,byrow=TRUE)
 
 mat_table=table(mat_mean)
 dim(mat_mean)
@@ -278,12 +297,30 @@ plot_attributes<-function(df,attribute_name,attribute_val)
   scatter3D(df$G1,df$G2,df$G3,colvar=df[,attribute_name]==attribute_val,colkey=list("1",'0'),cex=1,pch = 16,showscale = FALSE)
 }
 
-plot_attributes(math,'studytime',1)
 
-result2
 
-get_mean(por,'failures',0)
-get_mean(por,'failures',1)
+att_color = case_when(math$Fedu==0 ~ "black",
+                      math$Fedu==1 ~ "red",
+                      math$Fedu==2 ~ "orange",
+                      math$Fedu==3 ~ "yellow",
+                      math$Fedu==4 ~ "green")
+math$att_color=att_color
+open3d()
+par3d(windowRect = c(150, 150, 912, 912))
+plot3d(x=math$G1,y=math$G2,z=math$G3,col=math$att_color,type='s',size=1,xlab='G1 Score',ylab='G2 Score',zlab='G3 Score')
+legend3d("right",legend=c("None","Primary School","Some Secondary School","Secondary School","Higher Education"),pch=c(1,8),col=c("black","red","orange","yellow","green"),title="Father's Education")
+grid3d(c('x','y','z'),col='black')
+
+open3d()
+par3d(windowRect = c(150, 150, 912, 912))
+plot3d(x=math$G1,y=math$G2,z=math$G3,type='s',size=1)
+grid3d(c('x','y','z'),col='black')
+
+#col=math$att_color
+
+
+
+
 
 ## Predictive modelling
 
@@ -299,6 +336,31 @@ new_mat = cbind(math,pass)
 
 # Read the new data
 math = read.table(file="new_mat.csv",sep=',',header=TRUE)
+<<<<<<< Updated upstream
+=======
+
+# Yeo Jognson transformation 
+ltry <- linspace(0, 6, n = 100)
+ltry[21]
+lltry <- length(ltry)
+psi <- matrix(as.numeric(NA),length(math$G3) , lltry)
+for (ii in 1:lltry)
+  psi[, ii] <- yeo.johnson(math$G3, lambda = ltry[ii])
+
+
+
+
+psi[,1]
+
+hist(psi[,21])
+shapiro.test(psi[,21])
+test = list(2,3)
+
+qqnorm(math$G3, pch = 1, frame = FALSE)
+qqline(math$G3, col = "steelblue", lwd = 2)
+
+
+>>>>>>> Stashed changes
 # Train test split
 set.seed(4993) 
 split = sample.split(math, SplitRatio = 0.8)
@@ -452,6 +514,7 @@ create_rfplot(rf, type = 2)
 rf_pred = predict(rf,math_test)
 print(mmetric(math_test$pass,rf_pred,"CONF"))
 
+<<<<<<< Updated upstream
 # Logistic regression
 logisticr=fit(pass~age+Medu+Fedu+traveltime+studytime+failures+famrel+freetime+goout+Dalc+Walc+health+absences+G1,data=math_train,model="multinom") # Logistic Regression, sbs - standard backward selection
 logistic_pred = predict(logisticr,math_test)
@@ -462,3 +525,53 @@ library(LiblineaR)
 logisticr = LiblineaR(as.matrix(mat_trainX),mat_trainY)
 predictY = predict(logisticr,as.matrix(mat_testX))$predictions
 print(mmetric(as.factor(mat_testY),as.factor(predictY),"CONF"))
+=======
+logisticr=fit(pass~age+Medu+Fedu+traveltime+studytime+failures+famrel+freetime+goout+Dalc+Walc+health+absences+G1,math_train,model="multinom") # Logistic Regression, sbs - standard backward selection
+print(logisticr@object)
+logistic_pred = predict(logisticr,math_test)
+print(mmetric(math_test$pass,logistic_pred,"CONF"))
+save(logisticr, file="/Users/tom/OneDrive - HKUST Connect/MATH4993/Final.Project/logreg_binary.Rdata")
+
+library(LiblineaR)
+library(glmnet)
+
+mylogit <- glm(pass~age+Medu+Fedu+traveltime+studytime+failures+famrel+freetime+goout+Dalc+Walc+health+absences+G1,math_train,family='binomial')
+print(mylogit)
+
+
+
+
+
+
+temppass=read.csv(file='pass.csv',sep=',')
+temppasstest = read.csv(file='pass_test.csv',sep=',')
+
+temppass[,1:14]
+
+newx=model.matrix(temppass[,1:14])
+temppass = sapply(math$pass,unclass)
+
+lambdas <- 10^seq(2, -5, by = -.1)
+cv.lasso <-glmnet(data.matrix(temppass[,1:14]),temppass$pass,alpha=1,family="binomial")
+cv.rigde <-glmnet(data.matrix(temppass[,1:14]),temppass$pass,alpha=0,family='binomial')
+mylogit1<-cv.glmnet(data.matrix(temppass[,1:14]),alpha=0,temppass$pass,family = "binomial", type.measure = "class",nfolds=5,lambda=cv.rigde$lambda+0.25)
+plot(mylogit1)
+goodlambda=mylogit1$lambda.min
+print(mylogit1$lambda.min)
+print(mylogit1$dfmat)
+
+
+glmpred = predict(mylogit1,data.matrix(temppasstest[,1:14]),s=goodlambda,type='class')
+
+
+
+
+lr = LiblineaR(data.matrix(temppass[,1:14]),temppass$pass,type=7, findC=TRUE)
+predictY  =predict(lr,data.matrix(temppasstest[,1:14]))$predictions
+print(mmetric(as.factor(temppasstest$pass),as.factor(predictY),"CONF"))
+
+
+summary(lr)
+
+citation()
+>>>>>>> Stashed changes
